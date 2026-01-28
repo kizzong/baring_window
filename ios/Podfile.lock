@@ -1,0 +1,29 @@
+PODS:
+  - Flutter (1.0.0)
+  - home_widget (0.0.1):
+    - Flutter
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - home_widget (from `.symlinks/plugins/home_widget/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  home_widget:
+    :path: ".symlinks/plugins/home_widget/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  home_widget: fdbbfaa90f06f3022cb57f79678d4d58b9c5e140
+  path_provider_foundation: 0b743cbb62d8e47eab856f09262bb8c1ddcfe6ba
+
+PODFILE CHECKSUM: e30f02f9d1c72c47bb6344a0a748c9d268180865
+
+COCOAPODS: 1.16.2

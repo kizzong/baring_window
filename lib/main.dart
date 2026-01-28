@@ -1,7 +1,7 @@
 import 'package:baring_windows/services/widget_service.dart';
 import 'package:baring_windows/pages/home_page.dart';
 import 'package:baring_windows/pages/profile_page.dart';
-import 'package:baring_windows/pages/dday_settings_page.dart';
+// import 'package:baring_windows/pages/dday_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/adapters.dart';
