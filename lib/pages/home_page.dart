@@ -1,0 +1,406 @@
+import 'package:baring_windows/pages/dday_settings_page.dart';
+import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  Box baringBox = Hive.box("baring");
+
+  // 계산 함수들 추가
+  int _calculateDays(DateTime targetDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final end = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    return end.difference(today).inDays;
+  }
+
+  double _calculateProgress(DateTime startDate, DateTime targetDate) {
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final totalDays = end.difference(start).inDays;
+    if (totalDays <= 0) return 1.0;
+
+    final passedDays = today.difference(start).inDays;
+    return (passedDays / totalDays).clamp(0.0, 1.0);
+  }
+
+  int _calculatePercent(DateTime startDate, DateTime targetDate) {
+    return (_calculateProgress(startDate, targetDate) * 100).round();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userName = baringBox.get("userName", defaultValue: "바링"); // 이름 불러오기 ⭐
+
+    final eventData = baringBox.get("eventCard");
+
+    final title = eventData?["title"] ?? "목표를 설정해주세요";
+    final startDate = eventData != null
+        ? DateTime.parse(eventData["startDate"])
+        : DateTime.now();
+    final targetDate = eventData != null
+        ? DateTime.parse(eventData["targetDate"])
+        : DateTime.now().add(Duration(days: 100)); // 100일 후를 기본값으로
+    final selectedPreset = eventData?["selectedPreset"] ?? 0;
+
+    return Scaffold(
+      backgroundColor: Color(0xFF0B1623),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+          child: Column(
+            children: [
+              // 상단 프로필 및 날짜
+              Row(
+                children: [
+                  // avatar
+                  Container(
+                    height: 46,
+                    width: 46,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.10)),
+                    ),
+                    child: const Icon(Icons.person, color: Colors.white70),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')} (${['일', '월', '화', '수', '목', '금', '토'][DateTime.now().weekday % 7]})",
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "$userName 님",
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              EventCard(
+                title: title,
+                startDate: startDate,
+                targetDate: targetDate,
+                days: _calculateDays(targetDate),
+                gradient: presets[selectedPreset].colors,
+                progress: _calculateProgress(startDate, targetDate),
+                percent: _calculatePercent(startDate, targetDate),
+                onMoreTap: () async {
+                  // test_page로 이동하고 돌아올 때 화면 새로고침
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => DDaySettingsPage()),
+                  );
+                  setState(() {}); // 돌아왔을 때 데이터 새로고침
+                },
+              ),
+              const SizedBox(height: 22),
+
+              // 나의 목표 상황
+              Row(
+                children: [
+                  Icon(Icons.bar_chart, color: Colors.white, size: 22),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '분석',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {},
+                    child: const Text(
+                      '자세히',
+                      style: TextStyle(
+                        color: Color(0xFF2D86FF),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // 목표 카드 상황
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      // height: 140,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF0F1F2E),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.06),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Column(
+                              children: [
+                                SizedBox(height: 10),
+                                SizedBox(
+                                  height: 64,
+                                  width: 64,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox(
+                                        height: 64,
+                                        width: 64,
+                                        child: CircularProgressIndicator(
+                                          value: 1,
+                                          strokeWidth: 7,
+                                          valueColor: AlwaysStoppedAnimation(
+                                            Colors.white.withOpacity(0.10),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        height: 64,
+                                        width: 64,
+                                        child: CircularProgressIndicator(
+                                          value: 0.45,
+                                          strokeWidth: 7,
+                                          valueColor: AlwaysStoppedAnimation(
+                                            Color(0xFF22C55E),
+                                          ),
+                                          backgroundColor: Colors.transparent,
+                                        ),
+                                      ),
+                                      Text(
+                                        "45%",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            "진행도",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "28/24",
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.55),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+
+              // 오늘의 할 일
+              Row(
+                children: [
+                  Icon(Icons.task_alt_rounded, color: Colors.white, size: 22),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "오늘의 할 일",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  ),
+                  SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F2538),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.white.withOpacity(0.06)),
+                    ),
+                    child: const Text(
+                      '3개 남음',
+                      style: TextStyle(
+                        color: Color(0xFF2D86FF),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () {},
+                    icon: Icon(Icons.add, color: Color(0xFF2D86FF), size: 25),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // ✅ 체크박스
+              // Container(
+              //   padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+              //   decoration: BoxDecoration(
+              //     color: Color(0xFF0F1F2E),
+              //     borderRadius: BorderRadius.circular(18),
+              //     border: Border.all(color: Colors.white.withOpacity(0.06)),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       InkWell(
+              //         borderRadius: BorderRadius.circular(10),
+              //         onTap: () {},
+              //         child: Container(
+              //           height: 26,
+              //           width: 26,
+              //           decoration: BoxDecoration(
+              //             color: true
+              //                 ? const Color(0xFF2D86FF)
+              //                 : Colors.transparent,
+              //             borderRadius: BorderRadius.circular(8),
+              //             border: Border.all(
+              //               color: true
+              //                   ? Colors.transparent
+              //                   : Colors.white.withOpacity(0.18),
+              //               width: 1.6,
+              //             ),
+              //           ),
+              //           child: true
+              //               ? const Icon(
+              //                   Icons.check,
+              //                   size: 18,
+              //                   color: Colors.white,
+              //                 )
+              //               : null,
+              //         ),
+              //       ),
+              //       const SizedBox(width: 12),
+
+              //       Expanded(
+              //         child: Column(
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             Text(
+              //               "실기 기출문제 1회 풀기",
+              //               maxLines: 1,
+              //               overflow: TextOverflow.ellipsis,
+              //               style: TextStyle(
+              //                 fontWeight: FontWeight.w900,
+              //                 fontSize: 16,
+              //                 decoration: true
+              //                     ? TextDecoration.lineThrough
+              //                     : null,
+              //                 color: true
+              //                     ? Colors.white.withOpacity(0.45)
+              //                     : Colors.white,
+              //               ),
+              //             ),
+              //             const SizedBox(height: 10),
+              //             Row(
+              //               children: [
+              //                 // Container(
+              //                 //   padding: const EdgeInsets.symmetric(
+              //                 //     horizontal: 10,
+              //                 //     vertical: 5,
+              //                 //   ),
+              //                 //   decoration: BoxDecoration(
+              //                 //     color: Colors.white.withOpacity(0.18),
+              //                 //     borderRadius: BorderRadius.circular(10),
+              //                 //   ),
+              //                 //   child: Text(
+              //                 //     "tagText",
+              //                 //     style: TextStyle(
+              //                 //       // color: tagColor,
+              //                 //       fontWeight: FontWeight.w900,
+              //                 //       fontSize: 12,
+              //                 //       letterSpacing: 0.3,
+              //                 //     ),
+              //                 //   ),
+              //                 // ),
+              //                 // const SizedBox(width: 10),
+              //                 if ("timeText".isNotEmpty) ...[
+              //                   Icon(
+              //                     Icons.access_time,
+              //                     size: 16,
+              //                     color: Colors.white.withOpacity(0.55),
+              //                   ),
+              //                   const SizedBox(width: 6),
+              //                   Text(
+              //                     "13:00  (3h)",
+              //                     style: TextStyle(
+              //                       color: Colors.white.withOpacity(0.65),
+              //                       fontWeight: FontWeight.w700,
+              //                     ),
+              //                   ),
+              //                 ],
+              //               ],
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+
+              // Column(
+              //   children: List.generate(tasks.length, (i) {
+              //     final t = tasks[i];
+              //     return Padding(
+              //       padding: EdgeInsets.only(
+              //         bottom: i == tasks.length - 1 ? 0 : 12,
+              //       ),
+              //       child: _TaskTile(
+              //         title: t.title,
+              //         tagText: t.tagText,
+              //         tagColor: t.tagColor,
+              //         timeText: t.timeText,
+              //         done: t.done,
+              //         onToggle: () {
+              //           setState(
+              //             () => tasks[i] = tasks[i].copyWith(done: !t.done),
+              //           );
+              //         },
+              //         onSettings: () {},
+              //       ),
+              //     );
+              //   }),
+              // ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
