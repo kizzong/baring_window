@@ -182,81 +182,82 @@ struct BaringWidgetEntryView : View {
                     // 상단: 목표 뱃지
                     HStack {
                         Text("목표")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
                             .background(Color.white.opacity(0.18))
-                            .cornerRadius(12)
+                            .cornerRadius(10)
                         
                         Spacer()
                     }
+                    .frame(height: 20)
                     
                     Spacer()
-                        .frame(height: 14)
+                        .frame(height: 10)  // 14 → 10으로 축소 ⭐
                     
                     // 중단: 제목과 D-Day
-                    HStack(alignment: .center, spacing: 0) {
+                    HStack(alignment: .center, spacing: 6) {
                         Text(entry.title)
-                            .font(.system(size: min(geometry.size.width * 0.08, 30), weight: .black))
+                            .font(.system(size: 24, weight: .black))  // 30 → 28로 축소 ⭐
                             .foregroundColor(.white)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.5)
+                            .minimumScaleFactor(0.4)
                         
-                        Spacer(minLength: 8)
+                        Spacer(minLength: 2)
                         
                         Text(entry.dday)
-                            .font(.system(size: min(geometry.size.width * 0.13, 50), weight: .black))
+                            .font(.system(size: 40, weight: .black))
                             .foregroundColor(.white)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
+                    .frame(height: geometry.size.height * 0.4)
                     
-                    Spacer()
+                    Spacer(minLength: 0)
+
                     
                     // 하단: 프로그레스
-                    VStack(alignment: .trailing, spacing: 0) {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        // 퍼센트
                         Text(entry.percent)
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
-                        
-                        Spacer()
-                            .frame(height: 8)
+                            .frame(height: 12)
                         
                         // 프로그레스 바
                         ZStack(alignment: .leading) {
-                            // 배경
                             RoundedRectangle(cornerRadius: 999)
                                 .fill(Color.white.opacity(0.25))
-                                .frame(height: 10)
+                                .frame(height: 7)
                             
-                            // 진행 바
                             GeometryReader { geo in
                                 RoundedRectangle(cornerRadius: 999)
                                     .fill(Color.white)
-                                    .frame(width: geo.size.width * CGFloat(entry.progress), height: 10)
+                                    .frame(width: geo.size.width * CGFloat(entry.progress), height: 7)
                             }
-                            .frame(height: 10)
+                            .frame(height: 7)
                         }
-                        .frame(height: 10)
-                        
-                        Spacer()
-                            .frame(height: 16)
+                        .frame(height: 7)
                         
                         // 날짜
-                        HStack {
+                        HStack(spacing: 0) {
                             Text(entry.startDate)
-                                .font(.system(size: 11, weight: .regular))
+                                .font(.system(size: 9, weight: .regular))
                                 .foregroundColor(.white)
                             
                             Spacer()
                             
                             Text(entry.targetDate)
-                                .font(.system(size: 11, weight: .regular))
+                                .font(.system(size: 9, weight: .regular))
                                 .foregroundColor(.white)
                         }
+                        .frame(height: 12)
                     }
+                    .frame(height: 44) 
                 }
-                .padding(18)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
             }
             .clipShape(RoundedRectangle(cornerRadius: 22))
         }
@@ -277,6 +278,8 @@ struct BaringWidget: Widget {
         .configurationDisplayName("Baring D-Day")
         .description("목표까지 남은 날을 확인하세요")
         .supportedFamilies([.systemMedium])
+        .contentMarginsDisabled()  // 이 줄 추가 ⭐ (iOS 17+)
+
     }
 }
 
