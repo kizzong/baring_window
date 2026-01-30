@@ -169,53 +169,60 @@ struct BaringWidgetEntryView : View {
     }
     
     var body: some View {
-        ZStack {
-            // 그라데이션 배경
-            LinearGradient(
-                gradient: Gradient(colors: gradientColors),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            
-            VStack(alignment: .leading, spacing: 0) {
-                // 상단: 목표 뱃지
-                HStack {
-                    Text("목표")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Color.white.opacity(0.18))
-                        .cornerRadius(12)
+        GeometryReader { geometry in
+            ZStack {
+                // 그라데이션 배경
+                LinearGradient(
+                    gradient: Gradient(colors: gradientColors),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                
+                VStack(alignment: .leading, spacing: 0) {
+                    // 상단: 목표 뱃지
+                    HStack {
+                        Text("목표")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Color.white.opacity(0.18))
+                            .cornerRadius(12)
+                        
+                        Spacer()
+                    }
                     
                     Spacer()
-                }
-                .padding(.bottom, 14)
-                
-                // 중단: 제목과 D-Day
-                HStack(alignment: .center) {
-                    Text(entry.title)
-                        .font(.system(size: 30, weight: .black))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
+                        .frame(height: 14)
+                    
+                    // 중단: 제목과 D-Day
+                    HStack(alignment: .center, spacing: 0) {
+                        Text(entry.title)
+                            .font(.system(size: min(geometry.size.width * 0.08, 30), weight: .black))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                        
+                        Spacer(minLength: 8)
+                        
+                        Text(entry.dday)
+                            .font(.system(size: min(geometry.size.width * 0.13, 50), weight: .black))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
                     
                     Spacer()
                     
-                    Text(entry.dday)
-                        .font(.system(size: 50, weight: .black))
-                        .foregroundColor(.white)
-                }
-                
-                Spacer()
-                
-                // 하단: 프로그레스
-                VStack(alignment: .trailing, spacing: 8) {
-                    Text(entry.percent)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    // 프로그레스 바
-                    GeometryReader { geometry in
+                    // 하단: 프로그레스
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text(entry.percent)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                            .frame(height: 8)
+                        
+                        // 프로그레스 바
                         ZStack(alignment: .leading) {
                             // 배경
                             RoundedRectangle(cornerRadius: 999)
@@ -223,28 +230,35 @@ struct BaringWidgetEntryView : View {
                                 .frame(height: 10)
                             
                             // 진행 바
-                            RoundedRectangle(cornerRadius: 999)
-                                .fill(Color.white)
-                                .frame(width: geometry.size.width * CGFloat(entry.progress), height: 10)
+                            GeometryReader { geo in
+                                RoundedRectangle(cornerRadius: 999)
+                                    .fill(Color.white)
+                                    .frame(width: geo.size.width * CGFloat(entry.progress), height: 10)
+                            }
+                            .frame(height: 10)
                         }
-                    }
-                    .frame(height: 10)
-                    
-                    // 날짜
-                    HStack {
-                        Text(entry.startDate)
-                            .font(.system(size: 11))
-                            .foregroundColor(.white)
+                        .frame(height: 10)
                         
                         Spacer()
+                            .frame(height: 16)
                         
-                        Text(entry.targetDate)
-                            .font(.system(size: 11))
-                            .foregroundColor(.white)
+                        // 날짜
+                        HStack {
+                            Text(entry.startDate)
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundColor(.white)
+                            
+                            Spacer()
+                            
+                            Text(entry.targetDate)
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundColor(.white)
+                        }
                     }
                 }
+                .padding(18)
             }
-            .padding(18)
+            .clipShape(RoundedRectangle(cornerRadius: 22))
         }
         .widgetURL(URL(string: "baringapp://open"))
     }
@@ -256,6 +270,9 @@ struct BaringWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             BaringWidgetEntryView(entry: entry)
+                .containerBackground(for: .widget) {
+                    Color.clear
+                }
         }
         .configurationDisplayName("Baring D-Day")
         .description("목표까지 남은 날을 확인하세요")
@@ -292,14 +309,32 @@ extension Color {
 
 struct BaringWidget_Previews: PreviewProvider {
     static var previews: some View {
-        BaringWidgetEntryView(entry: SimpleEntry(date: Date(),
-                                                 title: "전기기사",
-                                                 dday: "D-30",
-                                                 percent: "70%",
-                                                 progress: 0.7,
-                                                 startDate: "2024/01/01",
-                                                 targetDate: "2024/12/31",
-                                                 selectedPreset: 0))
+        Group {
+            BaringWidgetEntryView(entry: SimpleEntry(
+                date: Date(),
+                title: "전기기사",
+                dday: "D-30",
+                percent: "70%",
+                progress: 0.7,
+                startDate: "2024/01/01",
+                targetDate: "2024/12/31",
+                selectedPreset: 0
+            ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
+            .previewDisplayName("기본 하늘")
+            
+            BaringWidgetEntryView(entry: SimpleEntry(
+                date: Date(),
+                title: "전기기사 자격증 취득",
+                dday: "D-5",
+                percent: "95%",
+                progress: 0.95,
+                startDate: "2024/01/01",
+                targetDate: "2024/12/31",
+                selectedPreset: 2
+            ))
+            .previewContext(WidgetPreviewContext(family: .systemMedium))
+            .previewDisplayName("빨강")
+        }
     }
 }
