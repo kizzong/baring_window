@@ -295,7 +295,32 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
 
               const SizedBox(height: 26),
 
-              _SectionTitle(icon: Icons.palette_rounded, title: '색상'),
+              Row(
+                children: [
+                  _SectionTitle(icon: Icons.palette_rounded, title: '색상'),
+                  SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      // color: colo,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Primium',
+                      style: TextStyle(
+                        color: Color(0xFF3B82F6),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
               // Card Design
               const SizedBox(height: 12),
@@ -313,7 +338,7 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
               const SizedBox(height: 10),
 
               SizedBox(
-                height: 90,
+                height: 100,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
@@ -509,6 +534,28 @@ class _PresetTile extends StatelessWidget {
                   )
                 : null,
           ),
+          // Transform.scale(
+          //   scale: 2.1,
+          //   child: Transform.translate(
+          //     offset: const Offset(7, -3),
+          //     child: Container(
+          //       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+          //       decoration: BoxDecoration(
+          //         color: Colors.black.withValues(alpha: 0.8),
+          //         borderRadius: BorderRadius.circular(12),
+          //       ),
+          //       child: Text(
+          //         'Primium',
+          //         style: TextStyle(
+          //           color: Color(0xFF3B82F6),
+          //           fontSize: 5,
+          //           fontWeight: FontWeight.w600,
+          //           letterSpacing: 0.2,
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ), // 프리미엄
           const SizedBox(height: 8),
           Text(
             name,

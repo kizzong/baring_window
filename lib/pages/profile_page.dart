@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -22,6 +25,8 @@ class _ProfilePageState extends State<ProfilePage> {
   bool achievementPush = false;
 
   int bottomIndex = 1;
+  String? profileImagePath; // 프로필 이미지 경로 추가 ⭐
+  final ImagePicker _picker = ImagePicker(); // 이미지 피커 추가 ⭐
 
   void _loadUserName() {
     final savedName = baringBox.get("userName");
@@ -35,21 +40,268 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _saveName() {
+  // 이미지 선택 함수 추가 ⭐
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          profileImagePath = image.path;
+        });
+        await baringBox.put("profileImagePath", image.path);
+
+        // 성공 메시지 표시 ⭐
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text(
+                    '프로필 사진이 변경되었습니다',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              backgroundColor: Color(0xFF22C55E),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              margin: EdgeInsets.all(16),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('이미지 선택 오류: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 12),
+                Text(
+                  '이미지를 선택할 수 없습니다',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            backgroundColor: Color(0xFFE06A6A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: EdgeInsets.all(16),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _saveProfile() {
     final newName = _nameController.text.trim();
     if (newName.isNotEmpty) {
       setState(() {
         userName = newName;
-        isEditingName = false; // 수정 모드 종료 ⭐
+        isEditingName = false;
       });
       baringBox.put("userName", newName);
+
+      // 성공 메시지 표시 ⭐
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 12),
+              Text(
+                '이름이 변경되었습니다',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFF22C55E),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.all(16),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      // 이름이 비어있을 때 경고 메시지 ⭐
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Text(
+                '이름을 입력해주세요',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFFFF9800),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.all(16),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
+  }
+
+  // 이미지 선택 옵션 다이얼로그 ⭐
+  Future<void> _showImageSourceDialog() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Color(0xFF1A2332),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_library, color: Color(0xFF2F80ED)),
+                title: Text('갤러리에서 선택', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: Color(0xFF2F80ED)),
+                title: Text('카메라로 촬영', style: TextStyle(color: Colors.white)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final XFile? photo = await _picker.pickImage(
+                      source: ImageSource.camera,
+                      maxWidth: 512,
+                      maxHeight: 512,
+                      imageQuality: 85,
+                    );
+                    if (photo != null) {
+                      setState(() {
+                        profileImagePath = photo.path;
+                      });
+                      await baringBox.put("profileImagePath", photo.path);
+
+                      // 성공 메시지 표시 ⭐
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 12),
+                                Text(
+                                  '프로필 사진이 변경되었습니다',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: Color(0xFF22C55E),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            margin: EdgeInsets.all(16),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    print('카메라 오류: $e');
+                  }
+                },
+              ),
+              if (profileImagePath != null)
+                ListTile(
+                  leading: Icon(Icons.delete, color: Color(0xFFE06A6A)),
+                  title: Text(
+                    '사진 삭제',
+                    style: TextStyle(color: Color(0xFFE06A6A)),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      profileImagePath = null;
+                    });
+                    baringBox.delete("profileImagePath");
+
+                    // 삭제 메시지 표시 ⭐
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.white),
+                            SizedBox(width: 12),
+                            Text(
+                              '프로필 사진이 삭제되었습니다',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: Color(0xFF64748B),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        margin: EdgeInsets.all(16),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   void initState() {
     super.initState();
     _loadUserName(); // ← 여기서 호출! ⭐
+    _loadUserData(); // 함수 이름 수정 ⭐
+  }
+
+  void _loadUserData() {
+    // 함수 이름 변경 ⭐
+    final savedName = baringBox.get("userName", defaultValue: "지호");
+    final savedImagePath = baringBox.get("profileImagePath");
+
+    setState(() {
+      userName = savedName;
+      _nameController.text = savedName;
+      profileImagePath = savedImagePath;
+    });
   }
 
   @override
@@ -79,23 +331,10 @@ class _ProfilePageState extends State<ProfilePage> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        // actions: [
-        //   TextButton(
-        //     onPressed: () {},
-        //     child: Text(
-        //       "완료",
-        //       style: TextStyle(
-        //         color: Color(0xFF3B82F6),
-        //         fontSize: 16,
-        //         fontWeight: FontWeight.w700,
-        //       ),
-        //     ),
-        //   ),
-        // ],
         actions: isEditingName
             ? [
                 TextButton(
-                  onPressed: _saveName,
+                  onPressed: _saveProfile,
                   child: Text(
                     "완료",
                     style: TextStyle(
@@ -141,14 +380,34 @@ class _ProfilePageState extends State<ProfilePage> {
                           width: 3,
                         ),
                       ),
-                      child: CircleAvatar(
-                        backgroundColor: Colors.grey.shade800,
-                        radius: 75,
-                        child: const Icon(
-                          Icons.person,
-                          color: Colors.white70,
-                          size: 100,
-                        ),
+                      child: ClipOval(
+                        child:
+                            profileImagePath !=
+                                null // 이미지 표시 ⭐
+                            ? Image.file(
+                                File(profileImagePath!),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return CircleAvatar(
+                                    backgroundColor: Colors.grey.shade800,
+                                    radius: 75,
+                                    child: const Icon(
+                                      Icons.person,
+                                      color: Colors.white70,
+                                      size: 100,
+                                    ),
+                                  );
+                                },
+                              )
+                            : CircleAvatar(
+                                backgroundColor: Colors.grey.shade800,
+                                radius: 75,
+                                child: const Icon(
+                                  Icons.person,
+                                  color: Colors.white70,
+                                  size: 100,
+                                ),
+                              ),
                       ),
                     ),
                     Container(
@@ -160,9 +419,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         border: Border.all(color: Color(0xFF0B1623), width: 3),
                       ),
                       child: IconButton(
-                        onPressed: () {
-                          // TODO: 사진 변경 기능 연결
-                        },
+                        onPressed: _showImageSourceDialog, // 다이얼로그 호출 ⭐
                         icon: const Icon(
                           Icons.camera_alt,
                           color: Colors.white,
@@ -187,15 +444,26 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Center(
-                child: Text(
-                  'Premium',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.65),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    // color: colo,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Primium',
+                    style: TextStyle(
+                      color: Color(0xFF3B82F6),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
                   ),
                 ),
               ),
@@ -204,7 +472,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
               // ---------- SECTION: PERSONAL INFORMATION ----------
               Text(
-                '개인 정보',
+                '프로필 정보',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.60),
                   fontSize: 12,
@@ -297,15 +565,40 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 22),
 
               // ---------- SECTION: NOTIFICATION PREFERENCES ----------
-              Text(
-                '알림 설정',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.60),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
+              Row(
+                children: [
+                  Text(
+                    '알림 설정',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.60),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F2538),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.white.withOpacity(0.06)),
+                    ),
+                    child: const Text(
+                      '준비중...',
+                      style: TextStyle(
+                        color: Color(0xFF2D86FF),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+
               const SizedBox(height: 10),
 
               _CardBox(
@@ -314,7 +607,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     _SwitchRow(
                       title: 'D-Day 알림',
                       desc: '현재 진행중인 목표를 매일 알려줘요',
-                      value: ddayAlerts,
+                      // value: ddayAlerts,
+                      value: false,
                       onChanged: (v) => setState(() => ddayAlerts = v),
                       primary: primary,
                       subtle: subtle,
@@ -324,7 +618,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     _SwitchRow(
                       title: '목표 진행률 알림',
                       desc: '25%, 50%, 75%, 100% 달성 시 알려줘요.',
-                      value: progressAlerts,
+                      // value: progressAlerts,
+                      value: false,
                       onChanged: (v) => setState(() => progressAlerts = v),
                       primary: primary,
                       subtle: subtle,
@@ -334,7 +629,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     _SwitchRow(
                       title: '목표 달성 알림',
                       desc: '목표를 달성하면 축하 알림을 보내줘요.',
-                      value: achievementPush,
+                      // value: achievementPush,
+                      value: false,
                       onChanged: (v) => setState(() => achievementPush = v),
                       primary: primary,
                       subtle: subtle,
@@ -343,45 +639,44 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 22),
 
               // ---------- LOG OUT ----------
-              Container(
-                height: 54,
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFE06A6A).withOpacity(0.55),
-                    width: 1.2,
-                  ),
-                ),
-                child: TextButton(
-                  onPressed: () {
-                    // TODO: 로그아웃 처리
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.refresh_rounded,
-                        color: Color(0xFFE06A6A),
-                        size: 20,
-                      ),
-                      SizedBox(width: 8),
-                      const Text(
-                        '다시 작성',
-                        style: TextStyle(
-                          color: Color(0xFFE06A6A),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Container(
+              //   height: 54,
+              //   decoration: BoxDecoration(
+              //     color: Colors.transparent,
+              //     borderRadius: BorderRadius.circular(16),
+              //     border: Border.all(
+              //       color: const Color(0xFFE06A6A).withOpacity(0.55),
+              //       width: 1.2,
+              //     ),
+              //   ),
+              //   child: TextButton(
+              //     onPressed: () {
+              //       // TODO: 로그아웃 처리
+              //     },
+              //     child: Row(
+              //       mainAxisAlignment: MainAxisAlignment.center,
+              //       children: [
+              //         const Icon(
+              //           Icons.refresh_rounded,
+              //           color: Color(0xFFE06A6A),
+              //           size: 20,
+              //         ),
+              //         SizedBox(width: 8),
+              //         const Text(
+              //           '다시 작성',
+              //           style: TextStyle(
+              //             color: Color(0xFFE06A6A),
+              //             fontSize: 16,
+              //             fontWeight: FontWeight.w800,
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),
