@@ -1,6 +1,3 @@
-import 'package:baring_windows/onboarding/on_boarding3.dart';
-import 'package:baring_windows/onboarding/on_boarding4.dart';
-import 'package:baring_windows/onboarding/on_boarding1.dart';
 import 'package:baring_windows/onboarding/on_boarding_service.dart';
 import 'package:baring_windows/onboarding/onboarding_page.dart';
 import 'package:baring_windows/services/widget_service.dart';
@@ -23,7 +20,7 @@ void main() async {
   await WidgetService.updateWidget(); // ⭐ 주석 해제
 
   // ⭐⭐⭐ 테스트용: 온보딩 리셋 (테스트 끝나면 삭제하세요!)
-  await OnboardingService.resetOnboarding();
+  // await OnboardingService.resetOnboarding();
 
   runApp(MyApp());
 }
@@ -36,12 +33,12 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  int _selectedIndex = 0;
-  final List<Widget> _pages = [
-    const HomePage(),
-    // const DDaySettingsPage(),
-    const ProfilePage(),
-  ];
+  // int _selectedIndex = 0;
+  // final List<Widget> _pages = [
+  //   const HomePage(),
+  //   // const DDaySettingsPage(),
+  //   const ProfilePage(),
+  // ];
 
   @override
   Widget build(BuildContext context) {

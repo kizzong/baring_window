@@ -5,7 +5,6 @@ import 'package:baring_windows/onboarding/on_boarding2.dart';
 import 'package:baring_windows/onboarding/on_boarding3.dart';
 import 'package:baring_windows/onboarding/on_boarding4.dart';
 import 'package:baring_windows/onboarding/on_boarding_service.dart';
-import 'package:baring_windows/pages/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
@@ -24,33 +23,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ContainerTransitionType.fadeThrough; // ⭐ 전환 타입
 
   // 온보딩 완료 후 메인 앱으로 이동
-  Future<void> _completeOnboarding() async {
-    await OnboardingService.completeOnboarding();
-
-    if (!mounted) return;
-
-    // ⭐ OpenContainer 애니메이션과 함께 화면 전환
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const MainAppScreen(),
-        transitionDuration: const Duration(milliseconds: 600),
-        reverseTransitionDuration: const Duration(milliseconds: 400),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          // Fade + Scale 애니메이션
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.92, end: 1.0).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-              ),
-              child: child,
-            ),
-          );
-        },
-      ),
-    );
-  }
+  // Future<void> _completeOnboarding() async {
+  //   await OnboardingService.completeOnboarding();
+  //   if (!mounted) return;
+  //   // ⭐ OpenContainer 애니메이션과 함께 화면 전환
+  //   Navigator.of(context).pushReplacement(
+  //     PageRouteBuilder(
+  //       pageBuilder: (context, animation, secondaryAnimation) =>
+  //           const MainAppScreen(),
+  //       transitionDuration: const Duration(milliseconds: 600),
+  //       reverseTransitionDuration: const Duration(milliseconds: 400),
+  //       transitionsBuilder: (context, animation, secondaryAnimation, child) {
+  //         // Fade + Scale 애니메이션
+  //         return FadeTransition(
+  //           opacity: animation,
+  //           child: ScaleTransition(
+  //             scale: Tween<double>(begin: 0.92, end: 1.0).animate(
+  //               CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+  //             ),
+  //             child: child,
+  //           ),
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
