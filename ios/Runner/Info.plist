@@ -16,6 +16,15 @@
         </array>
     </dict>
 	</array>
+
+	<!-- 이 줄들 추가 ⭐ -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>https</string>
+        <string>mailto</string>
+    </array>
+
+	
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

@@ -261,7 +261,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  "28/24",
+                                  "24/28",
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.55),
                                     fontWeight: FontWeight.w800,
@@ -337,11 +337,13 @@ class _HomePageState extends State<HomePage> {
                         decoration: BoxDecoration(
                           color: true
                               ? const Color(0xFF2D86FF)
+                              // ignore: dead_code
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: true
                                 ? Colors.transparent
+                                // ignore: dead_code
                                 : Colors.white.withOpacity(0.18),
                             width: 1.6,
                           ),
@@ -352,6 +354,7 @@ class _HomePageState extends State<HomePage> {
                                 size: 18,
                                 color: Colors.white,
                               )
+                            // ignore: dead_code
                             : null,
                       ),
                     ),
@@ -370,9 +373,11 @@ class _HomePageState extends State<HomePage> {
                               fontSize: 16,
                               decoration: true
                                   ? TextDecoration.lineThrough
+                                  // ignore: dead_code
                                   : null,
                               color: true
                                   ? Colors.white.withOpacity(0.45)
+                                  // ignore: dead_code
                                   : Colors.white,
                             ),
                           ),

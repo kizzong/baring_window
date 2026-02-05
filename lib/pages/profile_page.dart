@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -283,6 +284,232 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       },
     );
+  }
+
+  // 앱스토어/플레이스토어 리뷰 페이지로 이동 ⭐
+  Future<void> _openReviewPage() async {
+    // 감사 메시지 먼저 표시
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.favorite, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '감사합니다! 소중한 후기 부탁드려요 💙',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Color(0xFF2D86FF),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: EdgeInsets.all(16),
+        duration: Duration(seconds: 3),
+      ),
+    );
+
+    // 1초 대기 후 스토어로 이동 ⭐
+    await Future.delayed(Duration(seconds: 1));
+
+    // 플랫폼별 스토어 URL
+    final Uri reviewUrl;
+
+    if (Platform.isAndroid) {
+      // Google Play 스토어 (패키지명을 실제 앱 패키지명으로 변경하세요)
+      reviewUrl = Uri.parse('market://details?id=com.example.baring_windows');
+      // 또는 웹 URL: https://play.google.com/store/apps/details?id=com.example.baring_windows
+    } else if (Platform.isIOS) {
+      // App Store (앱 ID를 실제 앱 ID로 변경하세요)
+      reviewUrl = Uri.parse(
+        'https://apps.apple.com/app/id1234567890?action=write-review',
+      );
+    } else {
+      return;
+    }
+
+    try {
+      if (await canLaunchUrl(reviewUrl)) {
+        await launchUrl(reviewUrl, mode: LaunchMode.externalApplication);
+      } else {
+        throw '스토어를 열 수 없습니다';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('리뷰 페이지를 열 수 없습니다'),
+            backgroundColor: Color(0xFFE06A6A),
+          ),
+        );
+      }
+    }
+  }
+
+  // 피드백 다이얼로그 표시 ⭐
+  void _showFeedbackDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Color(0xFF1A2332),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.sentiment_dissatisfied,
+                color: Color(0xFFFFB74D),
+                size: 28,
+              ),
+              SizedBox(width: 12),
+              Text(
+                '소중한 의견 감사합니다',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '아쉬운 부분이 있으셨군요.\n더 나은 서비스를 제공하기 위해 노력하겠습니다.',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.85),
+                  fontSize: 15,
+                  height: 1.5,
+                ),
+              ),
+              SizedBox(height: 20),
+              Container(
+                padding: EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.email_outlined,
+                          color: Color(0xFF3B82F6),
+                          size: 18,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          '피드백 보내기',
+                          style: TextStyle(
+                            color: Color(0xFF3B82F6),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    SelectableText(
+                      'kizzoman@naver.com', // 실제 이메일 주소로 변경하세요 ⭐
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                '닫기',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _sendFeedbackEmail();
+              },
+              icon: Icon(Icons.send, size: 18),
+              label: Text(
+                '메일 보내기',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 피드백 이메일 전송 ⭐
+  Future<void> _sendFeedbackEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'feedback@baring.app', // 실제 이메일 주소로 변경하세요 ⭐
+      query: Uri.encodeFull(
+        'subject=Baring 앱 피드백&body=안녕하세요,\n\n다음과 같은 피드백을 전달드립니다:\n\n',
+      ),
+    );
+
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        throw '메일 앱을 열 수 없습니다';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '메일 앱을 열 수 없습니다\nfeedback@baring.app으로 직접 연락해주세요',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Color(0xFFFF9800),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: EdgeInsets.all(16),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -640,6 +867,114 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               const SizedBox(height: 22),
+
+              Text(
+                '평가하기',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.60),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              _CardBox(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '앱이 마음에 드시나요?',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.85),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          height: 54,
+                          width: MediaQuery.of(context).size.width * 0.405,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF2D86FF).withOpacity(0.55),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: TextButton(
+                            onPressed: () {
+                              _openReviewPage();
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.thumb_up_outlined,
+                                  // color: Color(0xFFE06A6A),
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                const Text(
+                                  '좋아요!',
+                                  style: TextStyle(
+                                    // color: Color(0xFFE06A6A),
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // SizedBox(width: 12),
+                        Container(
+                          height: 54,
+                          width: MediaQuery.of(context).size.width * 0.395,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFFE06A6A).withOpacity(0.55),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: TextButton(
+                            onPressed: () {
+                              _showFeedbackDialog();
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.near_me_outlined,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                const Text(
+                                  '아쉬워요..',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
 
               // ---------- LOG OUT ----------
               // Container(
