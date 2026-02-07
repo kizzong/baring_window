@@ -66,6 +66,7 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
       initialDate: initial,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      locale: const Locale('ko', 'KR'),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(

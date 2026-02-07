@@ -23,7 +23,7 @@ class OnboardingPage1 extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Column(
               children: [
@@ -53,8 +53,7 @@ class OnboardingPage1 extends StatelessWidget {
                   ),
                 ),
 
-                // const Spacer(),
-                const SizedBox(height: 100),
+                const SizedBox(height: 80),
 
                 // 목표 카드
                 _GoalCard(
@@ -67,13 +66,7 @@ class OnboardingPage1 extends StatelessWidget {
                   progressValue: 0.7,
                 ),
 
-                Spacer(),
-
-                const SizedBox(height: 26),
-
-                const SizedBox(height: 22),
-
-                const SizedBox(height: 18),
+                const SizedBox(height: 60),
               ],
             ),
           ),

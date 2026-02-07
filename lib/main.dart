@@ -14,6 +14,7 @@ void main() async {
   await initializeDateFormatting();
 
   await Hive.initFlutter();
+
   await Hive.openBox('baring');
 
   // 위젯 초기화 ⭐

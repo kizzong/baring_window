@@ -69,11 +69,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
               OnboardingPage4(),
             ],
           ),
-          Container(
-            alignment: const Alignment(0, 0.72),
+          Positioned(
+            bottom: 50,
+            left: 0,
+            right: 0,
             child: Column(
               children: [
-                SizedBox(height: 800),
                 SmoothPageIndicator(
                   controller: _controller,
                   count: 4,

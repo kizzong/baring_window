@@ -71,11 +71,7 @@ class OnboardingPage3 extends StatelessWidget {
                   ),
                 ),
 
-                SizedBox(height: 20),
-
-                const SizedBox(height: 54),
-
-                const SizedBox(height: 70),
+                const SizedBox(height: 120),
               ],
             ),
           ),
@@ -315,26 +311,6 @@ class _AppGridCompact extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Row(children: [_AppIconCompact(items[4])]),
-        const SizedBox(height: 50),
-
-        // 도크(높이 줄임)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(0.10)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              _DockIconCompact(icon: Icons.call),
-              _DockIconCompact(icon: Icons.message),
-              _DockIconCompact(icon: Icons.language),
-              _DockIconCompact(icon: Icons.music_note),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -363,33 +339,33 @@ class _AppIconCompact extends StatelessWidget {
     final iconColor = item.iconColor ?? Colors.white;
 
     return SizedBox(
-      width: 52, // 줄임
+      width: 44,
       child: Column(
         children: [
           Container(
-            width: 52, // 줄임
-            height: 52, // 줄임
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: item.color,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.22),
-                  blurRadius: 14,
-                  offset: const Offset(0, 9),
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 10,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
-            child: Icon(item.icon, color: iconColor, size: 26),
+            child: Icon(item.icon, color: iconColor, size: 22),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             item.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.70),
-              fontSize: 11, // 줄임
+              color: Colors.white.withValues(alpha: 0.70),
+              fontSize: 10,
               fontWeight: FontWeight.w700,
             ),
           ),
