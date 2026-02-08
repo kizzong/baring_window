@@ -20,59 +20,41 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool onLastPage = false;
   bool onThirdPage = false;
   ContainerTransitionType _transitionType =
-      ContainerTransitionType.fadeThrough; // ⭐ 전환 타입
-
-  // 온보딩 완료 후 메인 앱으로 이동
-  // Future<void> _completeOnboarding() async {
-  //   await OnboardingService.completeOnboarding();
-  //   if (!mounted) return;
-  //   // ⭐ OpenContainer 애니메이션과 함께 화면 전환
-  //   Navigator.of(context).pushReplacement(
-  //     PageRouteBuilder(
-  //       pageBuilder: (context, animation, secondaryAnimation) =>
-  //           const MainAppScreen(),
-  //       transitionDuration: const Duration(milliseconds: 600),
-  //       reverseTransitionDuration: const Duration(milliseconds: 400),
-  //       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-  //         // Fade + Scale 애니메이션
-  //         return FadeTransition(
-  //           opacity: animation,
-  //           child: ScaleTransition(
-  //             scale: Tween<double>(begin: 0.92, end: 1.0).animate(
-  //               CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-  //             ),
-  //             child: child,
-  //           ),
-  //         );
-  //       },
-  //     ),
-  //   );
-  // }
+      ContainerTransitionType.fadeThrough;
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
-      body: Stack(
+      backgroundColor: const Color(0xFF050A12),
+      body: Column(
         children: [
-          PageView(
-            controller: _controller,
-            onPageChanged: (index) {
-              setState(() {
-                onLastPage = (index == 3);
-                onThirdPage = (index == 2);
-              });
-            },
-            children: [
-              OnboardingPage1(),
-              OnboardingPage2(),
-              OnboardingPage3(),
-              OnboardingPage4(),
-            ],
+          Expanded(
+            child: PageView(
+              controller: _controller,
+              onPageChanged: (index) {
+                setState(() {
+                  onLastPage = (index == 3);
+                  onThirdPage = (index == 2);
+                });
+              },
+              children: [
+                OnboardingPage1(),
+                OnboardingPage2(),
+                OnboardingPage3(),
+                OnboardingPage4(),
+              ],
+            ),
           ),
-          Positioned(
-            bottom: 50,
-            left: 0,
-            right: 0,
+          Container(
+            color: const Color(0xFF050A12),
+            padding: EdgeInsets.only(
+              bottom: bottomPadding + h * 0.02,
+              top: h * 0.02,
+            ),
             child: Column(
               children: [
                 SmoothPageIndicator(
@@ -86,12 +68,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     activeDotColor: Colors.white,
                   ),
                 ),
-                SizedBox(height: 35),
+                SizedBox(height: h * 0.02),
 
                 if (onThirdPage == true)
                   SizedBox(
-                    width: 385,
-                    height: 62,
+                    width: w * 0.88,
+                    height: h * 0.068,
                     child: ElevatedButton(
                       onPressed: () {
                         _controller.nextPage(
@@ -116,39 +98,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                     ),
                   )
-                // else if (onLastPage == true)
-                //   SizedBox(
-                //     width: 385,
-                //     height: 62,
-                //     child: ElevatedButton(
-                //       onPressed: _completeOnboarding, // 온보딩 완료 처리,
-                //       style: ElevatedButton.styleFrom(
-                //         backgroundColor: const Color(0xFF3E7BFF),
-                //         shape: RoundedRectangleBorder(
-                //           borderRadius: BorderRadius.circular(18),
-                //         ),
-                //         elevation: 0,
-                //       ),
-                //       child: const Text(
-                //         '첫 목표 만들기',
-                //         style: TextStyle(
-                //           fontSize: 22,
-                //           fontWeight: FontWeight.w800,
-                //           color: Colors.white,
-                //         ),
-                //       ),
-                //     ),
-                //   )
                 else if (onLastPage == true)
-                  // ⭐ OpenContainer로 감싸기
                   SizedBox(
-                    width: 385,
-                    height: 62,
+                    width: w * 0.88,
+                    height: h * 0.068,
                     child: OpenContainer(
                       transitionType: _transitionType,
                       transitionDuration: const Duration(milliseconds: 700),
                       openBuilder: (context, action) {
-                        // 온보딩 완료 처리
                         OnboardingService.completeOnboarding();
                         return const MainAppScreen();
                       },
@@ -176,8 +133,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   )
                 else
                   SizedBox(
-                    width: 385,
-                    height: 62,
+                    width: w * 0.88,
+                    height: h * 0.068,
                     child: ElevatedButton(
                       onPressed: () {
                         _controller.nextPage(

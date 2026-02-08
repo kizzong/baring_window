@@ -48,7 +48,8 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
         title = eventData["title"] ?? "";
         startDate = DateTime.parse(eventData["startDate"]);
         targetDate = DateTime.parse(eventData["targetDate"]);
-        selectedPreset = eventData["selectedPreset"] ?? 0;
+        final preset = eventData["selectedPreset"] ?? 0;
+        selectedPreset = (preset >= 0 && preset < presets.length) ? preset : 0;
       });
     }
   }
@@ -183,184 +184,188 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
         ],
       ),
 
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 18),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 18),
 
-              // Event Details
-              _SectionTitle(icon: Icons.calendar_today_rounded, title: '이벤트'),
+                // Event Details
+                _SectionTitle(icon: Icons.calendar_today_rounded, title: '이벤트'),
 
-              const SizedBox(height: 12),
-              _GlassCard(
-                color: card,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _Label('이벤트'),
-                    const SizedBox(height: 8),
-                    _InputBox(
-                      child: TextField(
-                        controller: _titleController,
-                        maxLength: 30,
-                        onEditingComplete: () {
-                          setState(() {
-                            title = _titleController.text;
-                          });
-                        },
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
+                const SizedBox(height: 12),
+                _GlassCard(
+                  color: card,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _Label('이벤트'),
+                      const SizedBox(height: 8),
+                      _InputBox(
+                        child: TextField(
+                          controller: _titleController,
+                          maxLength: 30,
+                          onEditingComplete: () {
+                            setState(() {
+                              title = _titleController.text;
+                            });
+                          },
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: '이벤트 제목을 입력하세요',
+                            border: InputBorder.none,
+                            isDense: true,
+                            // counterText: '',
+                          ),
                         ),
-                        decoration: const InputDecoration(
-                          hintText: '이벤트 제목을 입력하세요',
-                          border: InputBorder.none,
-                          isDense: true,
-                          // counterText: '',
+                      ),
+
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const _Label('시작일'),
+                                const SizedBox(height: 8),
+                                _InputBox(
+                                  onTap: () => _pickDate(isStart: true),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        fmtDate(startDate),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      const Icon(
+                                        Icons.calendar_month_rounded,
+                                        color: Color(0xFF7B8DA0),
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const _Label('목표일'),
+                                const SizedBox(height: 8),
+                                _InputBox(
+                                  onTap: () => _pickDate(isStart: false),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        fmtDate(targetDate),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      const Icon(
+                                        Icons.calendar_month_rounded,
+                                        color: Color(0xFF7B8DA0),
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 26),
+
+                Row(
+                  children: [
+                    _SectionTitle(icon: Icons.palette_rounded, title: '색상'),
+                    SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        // color: colo,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Primium',
+                        style: TextStyle(
+                          color: Color(0xFF3B82F6),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ),
+                  ],
+                ),
 
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const _Label('시작일'),
-                              const SizedBox(height: 8),
-                              _InputBox(
-                                onTap: () => _pickDate(isStart: true),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      fmtDate(startDate),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    const Icon(
-                                      Icons.calendar_month_rounded,
-                                      color: Color(0xFF7B8DA0),
-                                      size: 20,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                // Card Design
+                const SizedBox(height: 12),
+                EventCard(
+                  title: _titleController.text,
+                  startDate: startDate,
+                  targetDate: targetDate,
+                  days: daysRemaining(),
+                  gradient: selected,
+                  progress: progressValue(),
+                  percent: progressPercent(),
+                ),
+                const SizedBox(height: 18),
+                const _Label('색상 선택'),
+                const SizedBox(height: 10),
+
+                SizedBox(
+                  height: 100,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (int i = 0; i < presets.length; i++) ...[
+                        _PresetTile(
+                          name: presets[i].name,
+                          colors: presets[i].colors,
+                          selected: selectedPreset == i,
+                          onTap: () => setState(() => selectedPreset = i),
                         ),
                         const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const _Label('목표일'),
-                              const SizedBox(height: 8),
-                              _InputBox(
-                                onTap: () => _pickDate(isStart: false),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      fmtDate(targetDate),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    const Icon(
-                                      Icons.calendar_month_rounded,
-                                      color: Color(0xFF7B8DA0),
-                                      size: 20,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
-                    ),
-
-                    const SizedBox(height: 18),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 26),
-
-              Row(
-                children: [
-                  _SectionTitle(icon: Icons.palette_rounded, title: '색상'),
-                  SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      // color: colo,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Primium',
-                      style: TextStyle(
-                        color: Color(0xFF3B82F6),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Card Design
-              const SizedBox(height: 12),
-              EventCard(
-                title: _titleController.text,
-                startDate: startDate,
-                targetDate: targetDate,
-                days: daysRemaining(),
-                gradient: selected,
-                progress: progressValue(),
-                percent: progressPercent(),
-              ),
-              const SizedBox(height: 18),
-              const _Label('색상 선택'),
-              const SizedBox(height: 10),
-
-              SizedBox(
-                height: 100,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    for (int i = 0; i < presets.length; i++) ...[
-                      _PresetTile(
-                        name: presets[i].name,
-                        colors: presets[i].colors,
-                        selected: selectedPreset == i,
-                        onTap: () => setState(() => selectedPreset = i),
-                      ),
-                      const SizedBox(width: 14),
                     ],
-                  ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 22),
+                const SizedBox(height: 22),
 
-              // Delete button
-              _DangerButton(text: '다시 작성', onTap: _resetToDefault),
-            ],
+                // Delete button
+                _DangerButton(text: '다시 작성', onTap: _resetToDefault),
+              ],
+            ),
           ),
         ),
       ),

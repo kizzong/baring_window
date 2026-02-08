@@ -9,8 +9,9 @@ class OnboardingPage1 extends StatelessWidget {
   Widget build(BuildContext context) {
     const bgTop = Color(0xFF08101C);
     const bgBottom = Color(0xFF050A12);
-
     const primaryBlue = Color(0xFF3E7BFF);
+
+    final h = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: bgBottom,
@@ -27,7 +28,7 @@ class OnboardingPage1 extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Column(
               children: [
-                const SizedBox(height: 80),
+                SizedBox(height: h * 0.08),
 
                 // 상단 문구
                 const Text(
@@ -41,7 +42,7 @@ class OnboardingPage1 extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: 30),
+                SizedBox(height: h * 0.03),
                 Text(
                   '중요한 목표와 진행률을\n한눈에 관리하세요.',
                   textAlign: TextAlign.center,
@@ -53,7 +54,7 @@ class OnboardingPage1 extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 80),
+                SizedBox(height: h * 0.07),
 
                 // 목표 카드
                 _GoalCard(
@@ -66,7 +67,6 @@ class OnboardingPage1 extends StatelessWidget {
                   progressValue: 0.7,
                 ),
 
-                const SizedBox(height: 60),
               ],
             ),
           ),

@@ -13,8 +13,8 @@ class OnboardingPage4 extends StatelessWidget {
       builder: (context, constraints) {
         return Scaffold(
           body: Container(
-            width: constraints.maxWidth, // 부모의 최대 너비 사용 ⭐
-            height: constraints.maxHeight, // 부모의 최대 높이 사용 ⭐
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -27,8 +27,9 @@ class OnboardingPage4 extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: Column(
                   children: [
-                    const SizedBox(height: 200),
-                    // 🎉 아이콘 (선택)
+                    const Spacer(flex: 3),
+
+                    // 아이콘
                     Container(
                       width: 88,
                       height: 88,
@@ -43,7 +44,7 @@ class OnboardingPage4 extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 100),
+                    const Spacer(flex: 2),
 
                     // 제목
                     const Text(
@@ -71,13 +72,7 @@ class OnboardingPage4 extends StatelessWidget {
                       ),
                     ),
 
-                    const Spacer(),
-
-                    // 페이지 점 (4번째)
-                    // const _Dots(activeIndex: 3),
-                    const SizedBox(height: 18),
-
-                    const SizedBox(height: 24),
+                    const Spacer(flex: 2),
                   ],
                 ),
               ),

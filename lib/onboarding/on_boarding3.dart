@@ -10,6 +10,8 @@ class OnboardingPage3 extends StatelessWidget {
     const bgTop = Color(0xFF08101C);
     const bgBottom = Color(0xFF050A12);
 
+    final h = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: Color(0xFF0B1623),
       body: Container(
@@ -25,7 +27,7 @@ class OnboardingPage3 extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Column(
               children: [
-                const SizedBox(height: 46),
+                SizedBox(height: h * 0.04),
 
                 // 제목
                 const Text(
@@ -52,26 +54,36 @@ class OnboardingPage3 extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 18),
+                SizedBox(height: h * 0.02),
 
                 // 휴대폰 프레임
                 Expanded(
-                  child: Center(
-                    child: _PhoneMockCompact(
-                      child: Column(
-                        children: const [
-                          SizedBox(height: 14),
-                          _WidgetCardCompact(),
-                          SizedBox(height: 34),
-                          _AppGridCompact(),
-                          // Spacer(),
-                        ],
-                      ),
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Center(
+                        child: _PhoneMockCompact(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.topCenter,
+                            child: SizedBox(
+                              width: constraints.maxWidth * 0.65,
+                              child: Column(
+                                children: const [
+                                  SizedBox(height: 14),
+                                  _WidgetCardCompact(),
+                                  SizedBox(height: 34),
+                                  _AppGridCompact(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
 
-                const SizedBox(height: 120),
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -88,7 +100,6 @@ class _PhoneMockCompact extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
-      // 살짝 더 길게 잡아서(세로 공간 조금 더 확보)
       aspectRatio: 9 / 16.5,
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -107,17 +118,11 @@ class _PhoneMockCompact extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(36),
             border: Border.all(color: Colors.white.withOpacity(0.10), width: 2),
-            // gradient: const LinearGradient(
-            //   begin: Alignment.topCenter,
-            //   end: Alignment.bottomCenter,
-            //   colors: [Color(0xFF0B1623), Color(0xFF050A12)],
-            // ),
             color: Color(0xFF0B1623),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(36),
             child: Padding(
-              // 내부 패딩 줄임 (공간 확보!)
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               child: child,
             ),
@@ -190,7 +195,7 @@ class _WidgetCardCompact extends StatelessWidget {
                   '자격증 합격!',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 24, // 줄임
+                    fontSize: 24,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.6,
                   ),
@@ -201,7 +206,7 @@ class _WidgetCardCompact extends StatelessWidget {
                 'D-32',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 36, // 줄임
+                  fontSize: 36,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -1.0,
                 ),
@@ -227,7 +232,7 @@ class _WidgetCardCompact extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: SizedBox(
-              height: 8, // 줄임
+              height: 8,
               child: LinearProgressIndicator(
                 value: 0.7,
                 backgroundColor: Colors.white.withOpacity(0.25),
@@ -382,8 +387,8 @@ class _DockIconCompact extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 48, // 줄임
-      height: 40, // 줄임
+      width: 48,
+      height: 40,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),

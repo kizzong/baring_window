@@ -134,7 +134,7 @@ class _HomePageState extends State<HomePage> {
                 startDate: startDate,
                 targetDate: targetDate,
                 days: _calculateDays(targetDate),
-                gradient: presets[selectedPreset].colors,
+                gradient: presets[selectedPreset.clamp(0, presets.length - 1)].colors,
                 progress: _calculateProgress(startDate, targetDate),
                 percent: _calculatePercent(startDate, targetDate),
                 onMoreTap: () async {

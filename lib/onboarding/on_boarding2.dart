@@ -21,6 +21,9 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Container(
@@ -36,8 +39,7 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
             padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Column(
               children: [
-                // const SizedBox(height: 16),
-                const SizedBox(height: 90),
+                SizedBox(height: h * 0.08),
 
                 // 제목
                 const Text(
@@ -58,31 +60,39 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
                     fontSize: 18,
                     height: 1.6,
                     color: Colors.white.withValues(alpha: 0.55),
-                    // color: Color(0xFF6B7684),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
 
-                const SizedBox(height: 100),
+                const Spacer(flex: 2),
 
                 // 카드 미리보기
                 SizedBox(
-                  height: 220,
+                  height: h * 0.26,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      _PreviewCard(color: cardColors[2], rotate: -0.18),
-                      _PreviewCard(color: cardColors[0], rotate: 0.18),
+                      _PreviewCard(
+                        color: cardColors[2],
+                        rotate: -0.18,
+                        screenWidth: w,
+                      ),
+                      _PreviewCard(
+                        color: cardColors[0],
+                        rotate: 0.18,
+                        screenWidth: w,
+                      ),
                       _PreviewCard(
                         color: cardColors[selectedIndex],
                         rotate: 0,
                         isMain: true,
+                        screenWidth: w,
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 30),
+                SizedBox(height: h * 0.03),
 
                 // 색 선택
                 Row(
@@ -106,11 +116,7 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
                   }),
                 ),
 
-                const Spacer(),
-
-                const SizedBox(height: 20),
-
-                const SizedBox(height: 20),
+                const Spacer(flex: 1),
               ],
             ),
           ),
@@ -124,20 +130,25 @@ class _PreviewCard extends StatelessWidget {
   const _PreviewCard({
     required this.color,
     required this.rotate,
+    required this.screenWidth,
     this.isMain = false,
   });
 
   final Color color;
   final double rotate;
+  final double screenWidth;
   final bool isMain;
 
   @override
   Widget build(BuildContext context) {
+    final cardWidth = isMain ? screenWidth * 0.78 : screenWidth * 0.72;
+    final cardHeight = isMain ? cardWidth * 0.56 : cardWidth * 0.56;
+
     return Transform.rotate(
       angle: rotate,
       child: Container(
-        width: isMain ? 320 : 300,
-        height: isMain ? 180 : 170,
+        width: cardWidth,
+        height: cardHeight,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: color,

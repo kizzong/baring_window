@@ -21,7 +21,7 @@ void main() async {
   await WidgetService.updateWidget(); // ⭐ 주석 해제
 
   // ⭐⭐⭐ 테스트용: 온보딩 리셋 (테스트 끝나면 삭제하세요!)
-  // await OnboardingService.resetOnboarding();
+  await OnboardingService.resetOnboarding();
 
   runApp(MyApp());
 }

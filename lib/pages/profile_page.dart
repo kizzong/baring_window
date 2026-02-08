@@ -586,9 +586,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1014,6 +1017,7 @@ class _ProfilePageState extends State<ProfilePage> {
               // ),
             ],
           ),
+        ),
         ),
       ),
     );
