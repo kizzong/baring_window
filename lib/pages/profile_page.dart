@@ -324,7 +324,7 @@ class _ProfilePageState extends State<ProfilePage> {
     } else if (Platform.isIOS) {
       // App Store (앱 ID를 실제 앱 ID로 변경하세요)
       reviewUrl = Uri.parse(
-        'https://apps.apple.com/app/id1234567890?action=write-review',
+        'https://apps.apple.com/app/id6743991553?action=write-review',
       );
     } else {
       return;
@@ -401,16 +401,16 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.email_outlined,
-                          color: Color(0xFF3B82F6),
-                          size: 18,
+                        Image.asset(
+                          'assets/kakao_icon.png',
+                          width: 18,
+                          height: 18,
                         ),
                         SizedBox(width: 8),
                         Text(
-                          '피드백 보내기',
+                          '카카오톡으로 피드백 보내기',
                           style: TextStyle(
-                            color: Color(0xFF3B82F6),
+                            color: Color(0xFFFFE812),
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
@@ -418,8 +418,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       ],
                     ),
                     SizedBox(height: 8),
-                    SelectableText(
-                      'kizzoman@naver.com', // 실제 이메일 주소로 변경하세요 ⭐
+                    Text(
+                      '오픈채팅에서 의견을 남겨주세요!',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15,
@@ -445,16 +445,16 @@ class _ProfilePageState extends State<ProfilePage> {
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                _sendFeedbackEmail();
+                _openKakaoFeedback();
               },
-              icon: Icon(Icons.send, size: 18),
+              icon: Image.asset('assets/kakao_icon.png', width: 18, height: 18),
               label: Text(
-                '메일 보내기',
+                '카톡으로 보내기',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF3B82F6),
-                foregroundColor: Colors.white,
+                backgroundColor: Color(0xFFFFE812),
+                foregroundColor: Color(0xFF3C1E1E),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -467,21 +467,15 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 피드백 이메일 전송 ⭐
-  Future<void> _sendFeedbackEmail() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'feedback@baring.app', // 실제 이메일 주소로 변경하세요 ⭐
-      query: Uri.encodeFull(
-        'subject=Baring 앱 피드백&body=안녕하세요,\n\n다음과 같은 피드백을 전달드립니다:\n\n',
-      ),
-    );
+  // 카카오톡 오픈채팅 피드백 ⭐
+  Future<void> _openKakaoFeedback() async {
+    final Uri kakaoUrl = Uri.parse('https://open.kakao.com/o/sdDlLufi');
 
     try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
+      if (await canLaunchUrl(kakaoUrl)) {
+        await launchUrl(kakaoUrl, mode: LaunchMode.externalApplication);
       } else {
-        throw '메일 앱을 열 수 없습니다';
+        throw '카카오톡을 열 수 없습니다';
       }
     } catch (e) {
       if (mounted) {
@@ -492,10 +486,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Icon(Icons.info_outline, color: Colors.white),
                 SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    '메일 앱을 열 수 없습니다\nfeedback@baring.app으로 직접 연락해주세요',
-                    style: TextStyle(fontSize: 14),
-                  ),
+                  child: Text('카카오톡을 열 수 없습니다', style: TextStyle(fontSize: 14)),
                 ),
               ],
             ),
@@ -521,7 +512,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _loadUserData() {
     // 함수 이름 변경 ⭐
-    final savedName = baringBox.get("userName", defaultValue: "지호");
+    final savedName = baringBox.get("userName", defaultValue: "바링");
     final savedImagePath = baringBox.get("profileImagePath");
 
     setState(() {
@@ -592,432 +583,441 @@ class _ProfilePageState extends State<ProfilePage> {
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ---------- AVATAR ----------
-              Center(
-                child: Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    Container(
-                      width: 150,
-                      height: 150,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.10),
-                          width: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ---------- AVATAR ----------
+                Center(
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.10),
+                            width: 3,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child:
+                              profileImagePath !=
+                                  null // 이미지 표시 ⭐
+                              ? Image.file(
+                                  File(profileImagePath!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return CircleAvatar(
+                                      backgroundColor: Colors.grey.shade800,
+                                      radius: 75,
+                                      child: const Icon(
+                                        Icons.person,
+                                        color: Colors.white70,
+                                        size: 100,
+                                      ),
+                                    );
+                                  },
+                                )
+                              : CircleAvatar(
+                                  backgroundColor: Colors.grey.shade800,
+                                  radius: 75,
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white70,
+                                    size: 100,
+                                  ),
+                                ),
                         ),
                       ),
-                      child: ClipOval(
-                        child:
-                            profileImagePath !=
-                                null // 이미지 표시 ⭐
-                            ? Image.file(
-                                File(profileImagePath!),
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return CircleAvatar(
-                                    backgroundColor: Colors.grey.shade800,
-                                    radius: 75,
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: Colors.white70,
-                                      size: 100,
-                                    ),
-                                  );
-                                },
-                              )
-                            : CircleAvatar(
-                                backgroundColor: Colors.grey.shade800,
-                                radius: 75,
-                                child: const Icon(
-                                  Icons.person,
-                                  color: Colors.white70,
-                                  size: 100,
-                                ),
-                              ),
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Color(0xFF0B1623),
+                            width: 3,
+                          ),
+                        ),
+                        child: IconButton(
+                          onPressed: _showImageSourceDialog, // 다이얼로그 호출 ⭐
+                          icon: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // ---------- NAME / SUBTITLE ----------
+                Center(
+                  child: Text(
+                    userName,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      // color: colo,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Primium',
+                      style: TextStyle(
+                        color: Color(0xFF3B82F6),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
                       ),
                     ),
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Color(0xFF0B1623), width: 3),
+                  ),
+                ),
+
+                const SizedBox(height: 26),
+
+                // ---------- SECTION: PERSONAL INFORMATION ----------
+                Text(
+                  '프로필 정보',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.60),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                _CardBox(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '이름',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      child: IconButton(
-                        onPressed: _showImageSourceDialog, // 다이얼로그 호출 ⭐
-                        icon: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 22,
+                      const SizedBox(height: 10),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.08),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _nameController,
+                                maxLength: 10,
+                                onTap: () {
+                                  setState(() {
+                                    isEditingName = true; // 수정 모드 활성화
+                                  });
+                                },
+                                // onChanged: (value) {
+                                //   setState(() {
+                                //     userName = value; // 실시간 반영 ⭐
+                                //   });
+                                // },
+                                onEditingComplete: () {
+                                  setState(() {
+                                    userName = _nameController.text; // 실시간 반영 ⭐
+                                  });
+                                },
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  counterText: '', // 글자 수 카운터 숨기기
+                                ),
+                              ),
+                            ),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () {
+                                // TODO: 이름 수정 dialog 연결
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(6.0),
+                                child: Icon(
+                                  Icons.edit,
+                                  color: primary.withOpacity(0.95),
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+
+                // ---------- SECTION: NOTIFICATION PREFERENCES ----------
+                Row(
+                  children: [
+                    Text(
+                      '알림 설정',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.60),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F2538),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.06),
+                        ),
+                      ),
+                      child: const Text(
+                        '준비중...',
+                        style: TextStyle(
+                          color: Color(0xFF2D86FF),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
 
-              const SizedBox(height: 14),
+                const SizedBox(height: 10),
 
-              // ---------- NAME / SUBTITLE ----------
-              Center(
-                child: Text(
-                  userName,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    // color: colo,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Primium',
-                    style: TextStyle(
-                      color: Color(0xFF3B82F6),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 26),
-
-              // ---------- SECTION: PERSONAL INFORMATION ----------
-              Text(
-                '프로필 정보',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.60),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              _CardBox(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '이름',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.85),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                _CardBox(
+                  child: Column(
+                    children: [
+                      _SwitchRow(
+                        title: 'D-Day 알림',
+                        desc: '현재 진행중인 목표를 매일 알려줘요',
+                        // value: ddayAlerts,
+                        value: false,
+                        onChanged: (v) => setState(() => ddayAlerts = v),
+                        primary: primary,
+                        subtle: subtle,
+                        line: line,
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.08),
+                      const SizedBox(height: 6),
+                      _SwitchRow(
+                        title: '목표 진행률 알림',
+                        desc: '25%, 50%, 75%, 100% 달성 시 알려줘요.',
+                        // value: progressAlerts,
+                        value: false,
+                        onChanged: (v) => setState(() => progressAlerts = v),
+                        primary: primary,
+                        subtle: subtle,
+                        line: line,
+                      ),
+                      const SizedBox(height: 6),
+                      _SwitchRow(
+                        title: '목표 달성 알림',
+                        desc: '목표를 달성하면 축하 알림을 보내줘요.',
+                        // value: achievementPush,
+                        value: false,
+                        onChanged: (v) => setState(() => achievementPush = v),
+                        primary: primary,
+                        subtle: subtle,
+                        line: line,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+
+                Text(
+                  '평가하기',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.60),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                _CardBox(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '앱이 마음에 드시나요?',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      child: Row(
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _nameController,
-                              maxLength: 10,
-                              onTap: () {
-                                setState(() {
-                                  isEditingName = true; // 수정 모드 활성화
-                                });
-                              },
-                              // onChanged: (value) {
-                              //   setState(() {
-                              //     userName = value; // 실시간 반영 ⭐
-                              //   });
-                              // },
-                              onEditingComplete: () {
-                                setState(() {
-                                  userName = _nameController.text; // 실시간 반영 ⭐
-                                });
-                              },
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
+                          Container(
+                            height: 54,
+                            width: MediaQuery.of(context).size.width * 0.405,
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF2D86FF,
+                                ).withOpacity(0.55),
+                                width: 1.2,
                               ),
-                              decoration: InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                                counterText: '', // 글자 수 카운터 숨기기
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                _openReviewPage();
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.thumb_up_outlined,
+                                    // color: Color(0xFFE06A6A),
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  const Text(
+                                    '좋아요!',
+                                    style: TextStyle(
+                                      // color: Color(0xFFE06A6A),
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: () {
-                              // TODO: 이름 수정 dialog 연결
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(6.0),
-                              child: Icon(
-                                Icons.edit,
-                                color: primary.withOpacity(0.95),
-                                size: 20,
+                          // SizedBox(width: 12),
+                          Container(
+                            height: 54,
+                            width: MediaQuery.of(context).size.width * 0.395,
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFFE06A6A,
+                                ).withOpacity(0.55),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                _showFeedbackDialog();
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.near_me_outlined,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  const Text(
+                                    '아쉬워요..',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              // ---------- SECTION: NOTIFICATION PREFERENCES ----------
-              Row(
-                children: [
-                  Text(
-                    '알림 설정',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.60),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.4,
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F2538),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: Colors.white.withOpacity(0.06)),
-                    ),
-                    child: const Text(
-                      '준비중...',
-                      style: TextStyle(
-                        color: Color(0xFF2D86FF),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              _CardBox(
-                child: Column(
-                  children: [
-                    _SwitchRow(
-                      title: 'D-Day 알림',
-                      desc: '현재 진행중인 목표를 매일 알려줘요',
-                      // value: ddayAlerts,
-                      value: false,
-                      onChanged: (v) => setState(() => ddayAlerts = v),
-                      primary: primary,
-                      subtle: subtle,
-                      line: line,
-                    ),
-                    const SizedBox(height: 6),
-                    _SwitchRow(
-                      title: '목표 진행률 알림',
-                      desc: '25%, 50%, 75%, 100% 달성 시 알려줘요.',
-                      // value: progressAlerts,
-                      value: false,
-                      onChanged: (v) => setState(() => progressAlerts = v),
-                      primary: primary,
-                      subtle: subtle,
-                      line: line,
-                    ),
-                    const SizedBox(height: 6),
-                    _SwitchRow(
-                      title: '목표 달성 알림',
-                      desc: '목표를 달성하면 축하 알림을 보내줘요.',
-                      // value: achievementPush,
-                      value: false,
-                      onChanged: (v) => setState(() => achievementPush = v),
-                      primary: primary,
-                      subtle: subtle,
-                      line: line,
-                    ),
-                  ],
                 ),
-              ),
-              const SizedBox(height: 22),
 
-              Text(
-                '평가하기',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.60),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              _CardBox(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '앱이 마음에 드시나요?',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.85),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          height: 54,
-                          width: MediaQuery.of(context).size.width * 0.405,
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFF2D86FF).withOpacity(0.55),
-                              width: 1.2,
-                            ),
-                          ),
-                          child: TextButton(
-                            onPressed: () {
-                              _openReviewPage();
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.thumb_up_outlined,
-                                  // color: Color(0xFFE06A6A),
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                SizedBox(width: 8),
-                                const Text(
-                                  '좋아요!',
-                                  style: TextStyle(
-                                    // color: Color(0xFFE06A6A),
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // SizedBox(width: 12),
-                        Container(
-                          height: 54,
-                          width: MediaQuery.of(context).size.width * 0.395,
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFFE06A6A).withOpacity(0.55),
-                              width: 1.2,
-                            ),
-                          ),
-                          child: TextButton(
-                            onPressed: () {
-                              _showFeedbackDialog();
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.near_me_outlined,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                SizedBox(width: 8),
-                                const Text(
-                                  '아쉬워요..',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // ---------- LOG OUT ----------
-              // Container(
-              //   height: 54,
-              //   decoration: BoxDecoration(
-              //     color: Colors.transparent,
-              //     borderRadius: BorderRadius.circular(16),
-              //     border: Border.all(
-              //       color: const Color(0xFFE06A6A).withOpacity(0.55),
-              //       width: 1.2,
-              //     ),
-              //   ),
-              //   child: TextButton(
-              //     onPressed: () {
-              //       // TODO: 로그아웃 처리
-              //     },
-              //     child: Row(
-              //       mainAxisAlignment: MainAxisAlignment.center,
-              //       children: [
-              //         const Icon(
-              //           Icons.refresh_rounded,
-              //           color: Color(0xFFE06A6A),
-              //           size: 20,
-              //         ),
-              //         SizedBox(width: 8),
-              //         const Text(
-              //           '다시 작성',
-              //           style: TextStyle(
-              //             color: Color(0xFFE06A6A),
-              //             fontSize: 16,
-              //             fontWeight: FontWeight.w800,
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //   ),
-              // ),
-            ],
+                // ---------- LOG OUT ----------
+                // Container(
+                //   height: 54,
+                //   decoration: BoxDecoration(
+                //     color: Colors.transparent,
+                //     borderRadius: BorderRadius.circular(16),
+                //     border: Border.all(
+                //       color: const Color(0xFFE06A6A).withOpacity(0.55),
+                //       width: 1.2,
+                //     ),
+                //   ),
+                //   child: TextButton(
+                //     onPressed: () {
+                //       // TODO: 로그아웃 처리
+                //     },
+                //     child: Row(
+                //       mainAxisAlignment: MainAxisAlignment.center,
+                //       children: [
+                //         const Icon(
+                //           Icons.refresh_rounded,
+                //           color: Color(0xFFE06A6A),
+                //           size: 20,
+                //         ),
+                //         SizedBox(width: 8),
+                //         const Text(
+                //           '다시 작성',
+                //           style: TextStyle(
+                //             color: Color(0xFFE06A6A),
+                //             fontSize: 16,
+                //             fontWeight: FontWeight.w800,
+                //           ),
+                //         ),
+                //       ],
+                //     ),
+                //   ),
+                // ),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
