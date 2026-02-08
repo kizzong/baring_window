@@ -107,12 +107,19 @@ class MainAppScreen extends StatefulWidget {
 
 class _MainAppScreenState extends State<MainAppScreen> {
   int _selectedIndex = 0;
+  final PageController _pageController = PageController();
 
   final List<Widget> _pages = [
     const HomePage(),
     // const DDaySettingsPage(),
     const ProfilePage(),
   ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +139,15 @@ class _MainAppScreenState extends State<MainAppScreen> {
       debugShowCheckedModeBanner: false,
 
       home: Scaffold(
-        body: _pages[_selectedIndex],
+        body: PageView(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          children: _pages,
+        ),
 
         bottomNavigationBar: BottomNavigationBar(
           backgroundColor: Color(0xFF0B1623),
@@ -144,9 +159,11 @@ class _MainAppScreenState extends State<MainAppScreen> {
             BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
           ],
           onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
           },
         ),
       ),
