@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:baring_windows/pages/dday_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -37,6 +38,30 @@ class _HomePageState extends State<HomePage> {
 
   int _calculatePercent(DateTime startDate, DateTime targetDate) {
     return (_calculateProgress(startDate, targetDate) * 100).round();
+  }
+
+  String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  List<Map<String, dynamic>> _getTodayTodos() {
+    final raw = baringBox.get('todos');
+    if (raw == null) return [];
+    final Map data = Map.from(raw);
+    final list = data[_todayKey];
+    if (list == null) return [];
+    return (list as List).map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  void _toggleTodo(int index) {
+    final raw = baringBox.get('todos');
+    if (raw == null) return;
+    final Map data = Map.from(raw);
+    final list = data[_todayKey];
+    if (list == null || index >= (list as List).length) return;
+    final todos = list.map((e) => Map<String, dynamic>.from(e)).toList();
+    todos[index]['done'] = !(todos[index]['done'] as bool);
+    data[_todayKey] = todos;
+    baringBox.put('todos', data);
+    setState(() {});
   }
 
   @override
@@ -134,7 +159,8 @@ class _HomePageState extends State<HomePage> {
                 startDate: startDate,
                 targetDate: targetDate,
                 days: _calculateDays(targetDate),
-                gradient: presets[selectedPreset.clamp(0, presets.length - 1)].colors,
+                gradient:
+                    presets[selectedPreset.clamp(0, presets.length - 1)].colors,
                 progress: _calculateProgress(startDate, targetDate),
                 percent: _calculatePercent(startDate, targetDate),
                 onMoreTap: () async {
@@ -146,8 +172,162 @@ class _HomePageState extends State<HomePage> {
                   setState(() {}); // 돌아왔을 때 데이터 새로고침
                 },
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 32),
 
+              // 오늘의 할 일
+              Builder(
+                builder: (context) {
+                  final todayTodos = _getTodayTodos();
+                  final doneCount = todayTodos
+                      .where((t) => t['done'] == true)
+                      .length;
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.task_alt_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            "오늘의 할 일",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (todayTodos.isNotEmpty) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F2538),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.06),
+                                ),
+                              ),
+                              child: Text(
+                                '$doneCount/${todayTodos.length}',
+                                style: const TextStyle(
+                                  color: Color(0xFF2D86FF),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                        ],
+                      ),
+                      const SizedBox(height: 15),
+                      if (todayTodos.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F1F2E),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.06),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '오늘의 할 일이 없습니다',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.3),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...List.generate(todayTodos.length, (i) {
+                          final todo = todayTodos[i];
+                          final isDone = todo['done'] == true;
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: i < todayTodos.length - 1 ? 10 : 0,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.fromLTRB(
+                                14,
+                                14,
+                                12,
+                                14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F1F2E),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.06),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  InkWell(
+                                    borderRadius: BorderRadius.circular(10),
+                                    onTap: () => _toggleTodo(i),
+                                    child: Container(
+                                      height: 26,
+                                      width: 26,
+                                      decoration: BoxDecoration(
+                                        color: isDone
+                                            ? const Color(0xFF2D86FF)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isDone
+                                              ? Colors.transparent
+                                              : Colors.white.withOpacity(0.18),
+                                          width: 1.6,
+                                        ),
+                                      ),
+                                      child: isDone
+                                          ? const Icon(
+                                              Icons.check,
+                                              size: 18,
+                                              color: Colors.white,
+                                            )
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      todo['title'] ?? '',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                        decoration: isDone
+                                            ? TextDecoration.lineThrough
+                                            : null,
+                                        color: isDone
+                                            ? Colors.white.withOpacity(0.45)
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 60),
+
+              //
               // 나의 목표 상황
               Row(
                 children: [
@@ -278,179 +458,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 22),
-
-              // 오늘의 할 일
-              Row(
-                children: [
-                  Icon(Icons.task_alt_rounded, color: Colors.white, size: 22),
-                  const SizedBox(width: 8),
-                  const Text(
-                    "오늘의 할 일",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-                  ),
-                  SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F2538),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: Colors.white.withOpacity(0.06)),
-                    ),
-                    child: const Text(
-                      '준비중...',
-                      style: TextStyle(
-                        color: Color(0xFF2D86FF),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.add, color: Color(0xFF2D86FF), size: 25),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // ✅ 체크박스
-              Container(
-                padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-                decoration: BoxDecoration(
-                  color: Color(0xFF0F1F2E),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withOpacity(0.06)),
-                ),
-                child: Row(
-                  children: [
-                    InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () {},
-                      child: Container(
-                        height: 26,
-                        width: 26,
-                        decoration: BoxDecoration(
-                          color: true
-                              ? const Color(0xFF2D86FF)
-                              // ignore: dead_code
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: true
-                                ? Colors.transparent
-                                // ignore: dead_code
-                                : Colors.white.withOpacity(0.18),
-                            width: 1.6,
-                          ),
-                        ),
-                        child: true
-                            ? const Icon(
-                                Icons.check,
-                                size: 18,
-                                color: Colors.white,
-                              )
-                            // ignore: dead_code
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "운동하기",
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                              decoration: true
-                                  ? TextDecoration.lineThrough
-                                  // ignore: dead_code
-                                  : null,
-                              color: true
-                                  ? Colors.white.withOpacity(0.45)
-                                  // ignore: dead_code
-                                  : Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              // Container(
-                              //   padding: const EdgeInsets.symmetric(
-                              //     horizontal: 10,
-                              //     vertical: 5,
-                              //   ),
-                              //   decoration: BoxDecoration(
-                              //     color: Colors.white.withOpacity(0.18),
-                              //     borderRadius: BorderRadius.circular(10),
-                              //   ),
-                              //   child: Text(
-                              //     "tagText",
-                              //     style: TextStyle(
-                              //       // color: tagColor,
-                              //       fontWeight: FontWeight.w900,
-                              //       fontSize: 12,
-                              //       letterSpacing: 0.3,
-                              //     ),
-                              //   ),
-                              // ),
-                              // const SizedBox(width: 10),
-                              if ("timeText".isNotEmpty) ...[
-                                Icon(
-                                  Icons.access_time,
-                                  size: 16,
-                                  color: Colors.white.withOpacity(0.55),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  "13:00  (3h)",
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.65),
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Column(
-              //   children: List.generate(tasks.length, (i) {
-              //     final t = tasks[i];
-              //     return Padding(
-              //       padding: EdgeInsets.only(
-              //         bottom: i == tasks.length - 1 ? 0 : 12,
-              //       ),
-              //       child: _TaskTile(
-              //         title: t.title,
-              //         tagText: t.tagText,
-              //         tagColor: t.tagColor,
-              //         timeText: t.timeText,
-              //         done: t.done,
-              //         onToggle: () {
-              //           setState(
-              //             () => tasks[i] = tasks[i].copyWith(done: !t.done),
-              //           );
-              //         },
-              //         onSettings: () {},
-              //       ),
-              //     );
-              //   }),
-              // ),
             ],
           ),
         ),

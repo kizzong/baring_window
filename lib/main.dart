@@ -2,6 +2,7 @@ import 'package:baring_windows/onboarding/on_boarding_service.dart';
 import 'package:baring_windows/onboarding/onboarding_page.dart';
 import 'package:baring_windows/services/widget_service.dart';
 import 'package:baring_windows/pages/home_page.dart';
+import 'package:baring_windows/pages/todo_page.dart';
 import 'package:baring_windows/pages/profile_page.dart';
 // import 'package:baring_windows/pages/dday_settings_page.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +22,7 @@ void main() async {
   await WidgetService.updateWidget(); // ⭐ 주석 해제
 
   // ⭐⭐⭐ 테스트용: 온보딩 리셋 (테스트 끝나면 삭제하세요!)
-  await OnboardingService.resetOnboarding();
+  // await OnboardingService.resetOnboarding();
 
   runApp(MyApp());
 }
@@ -111,7 +112,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
 
   final List<Widget> _pages = [
     const HomePage(),
-    // const DDaySettingsPage(),
+    const TodoPage(),
     const ProfilePage(),
   ];
 
@@ -155,7 +156,10 @@ class _MainAppScreenState extends State<MainAppScreen> {
           currentIndex: _selectedIndex,
           items: [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-            // BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: ""),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month),
+              label: "",
+            ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
           ],
           onTap: (index) {
