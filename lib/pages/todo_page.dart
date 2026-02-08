@@ -90,7 +90,10 @@ class _TodoPageState extends State<TodoPage> {
         SnackBar(
           content: Text(
             '"${removed['title']}" 삭제됨',
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.white60,
+            ),
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -203,7 +206,7 @@ class _TodoPageState extends State<TodoPage> {
         centerTitle: true,
         elevation: 0,
         title: const Text(
-          '할 일',
+          '할 일 관리',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
