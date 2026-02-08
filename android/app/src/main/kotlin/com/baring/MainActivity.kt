@@ -1,4 +1,4 @@
-package com.example.baring_windows
+package com.baring
 
 import io.flutter.embedding.android.FlutterActivity
 

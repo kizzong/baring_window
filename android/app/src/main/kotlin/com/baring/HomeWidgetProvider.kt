@@ -1,4 +1,4 @@
-package com.example.baring_windows
+package com.baring
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
