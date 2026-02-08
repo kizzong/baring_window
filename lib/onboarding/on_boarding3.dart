@@ -379,21 +379,3 @@ class _AppIconCompact extends StatelessWidget {
     );
   }
 }
-
-class _DockIconCompact extends StatelessWidget {
-  const _DockIconCompact({required this.icon});
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Icon(icon, color: const Color(0xFF1F2A37), size: 22),
-    );
-  }
-}
