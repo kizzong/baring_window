@@ -148,118 +148,108 @@ struct SimpleEntry: TimelineEntry {
     let selectedPreset: Int
 }
 
+// 색상 프리셋 정의 (위젯 본체 + containerBackground 양쪽에서 사용)
+func gradientColors(for preset: Int) -> [Color] {
+    switch preset {
+    case 0: return [Color(hex: "2D86FF"), Color(hex: "1B5CFF")]
+    case 1: return [Color(hex: "0E2A68"), Color(hex: "245BFF")]
+    case 2: return [Color(hex: "FF512F"), Color(hex: "DD2476")]
+    case 3: return [Color(hex: "FF7EB3"), Color(hex: "FF758C")]
+    case 4: return [Color(hex: "8A2BE2"), Color(hex: "FF3D8D")]
+    case 5: return [Color(hex: "FF8A00"), Color(hex: "FF3D5A")]
+    case 6: return [Color(hex: "FF9A5A"), Color(hex: "FF5E62")]
+    case 7: return [Color(hex: "34D399"), Color(hex: "059669")]
+    case 8: return [Color(hex: "2C2F4A"), Color(hex: "1A1C2C")]
+    case 9: return [Color(hex: "1B2430"), Color(hex: "0F141B")]
+    default: return [Color(hex: "2D86FF"), Color(hex: "1B5CFF")]
+    }
+}
+
 struct BaringWidgetEntryView : View {
     var entry: Provider.Entry
     
-    // 색상 프리셋 정의
-    var gradientColors: [Color] {
-        switch entry.selectedPreset {
-        case 0: return [Color(hex: "2D86FF"), Color(hex: "1B5CFF")]
-        case 1: return [Color(hex: "0E2A68"), Color(hex: "245BFF")]
-        case 2: return [Color(hex: "FF512F"), Color(hex: "DD2476")]
-        case 3: return [Color(hex: "FF7EB3"), Color(hex: "FF758C")]
-        case 4: return [Color(hex: "8A2BE2"), Color(hex: "FF3D8D")]
-        case 5: return [Color(hex: "FF8A00"), Color(hex: "FF3D5A")]
-        case 6: return [Color(hex: "FF9A5A"), Color(hex: "FF5E62")]
-        case 7: return [Color(hex: "34D399"), Color(hex: "059669")]
-        case 8: return [Color(hex: "2C2F4A"), Color(hex: "1A1C2C")]
-        case 9: return [Color(hex: "1B2430"), Color(hex: "0F141B")]
-        default: return [Color(hex: "2D86FF"), Color(hex: "1B5CFF")]
-        }
-    }
-    
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                // 그라데이션 배경
-                LinearGradient(
-                    gradient: Gradient(colors: gradientColors),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                
-                VStack(alignment: .leading, spacing: 0) {
-                    // 상단: 목표 뱃지
-                    HStack {
-                        Text("목표")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.white.opacity(0.18))
-                            .cornerRadius(10)
-                        
-                        Spacer()
-                    }
-                    .frame(height: 20)
-                    
-                    Spacer()
-                        .frame(height: 10)  // 14 → 10으로 축소 ⭐
-                    
-                    // 중단: 제목과 D-Day
-                    HStack(alignment: .center, spacing: 6) {
-                        Text(entry.title)
-                            .font(.system(size: 24, weight: .black))  // 30 → 28로 축소 ⭐
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
-                        
-                        Spacer(minLength: 2)
-                        
-                        Text(entry.dday)
-                            .font(.system(size: 40, weight: .black))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                    }
-                    .frame(height: geometry.size.height * 0.4)
-                    
-                    Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 0) {
+                // 상단: 목표 뱃지
+                HStack {
+                    Text("목표")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.18))
+                        .cornerRadius(10)
 
-                    
-                    // 하단: 프로그레스
-                    VStack(alignment: .trailing, spacing: 4) {
-                        // 퍼센트
-                        Text(entry.percent)
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(height: 12)
-                        
-                        // 프로그레스 바
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 999)
-                                .fill(Color.white.opacity(0.25))
-                                .frame(height: 7)
-                            
-                            GeometryReader { geo in
-                                RoundedRectangle(cornerRadius: 999)
-                                    .fill(Color.white)
-                                    .frame(width: geo.size.width * CGFloat(entry.progress), height: 7)
-                            }
+                    Spacer()
+                }
+                .frame(height: 20)
+
+                Spacer()
+                    .frame(height: 10)
+
+                // 중단: 제목과 D-Day
+                HStack(alignment: .center, spacing: 6) {
+                    Text(entry.title)
+                        .font(.system(size: 24, weight: .black))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.4)
+
+                    Spacer(minLength: 2)
+
+                    Text(entry.dday)
+                        .font(.system(size: 40, weight: .black))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .frame(height: geometry.size.height * 0.4)
+
+                Spacer(minLength: 0)
+
+
+                // 하단: 프로그레스
+                VStack(alignment: .trailing, spacing: 4) {
+                    // 퍼센트
+                    Text(entry.percent)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(height: 12)
+
+                    // 프로그레스 바
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 999)
+                            .fill(Color.white.opacity(0.25))
                             .frame(height: 7)
+
+                        GeometryReader { geo in
+                            RoundedRectangle(cornerRadius: 999)
+                                .fill(Color.white)
+                                .frame(width: geo.size.width * CGFloat(entry.progress), height: 7)
                         }
                         .frame(height: 7)
-                        
-                        // 날짜
-                        HStack(spacing: 0) {
-                            Text(entry.startDate)
-                                .font(.system(size: 9, weight: .regular))
-                                .foregroundColor(.white)
-                            
-                            Spacer()
-                            
-                            Text(entry.targetDate)
-                                .font(.system(size: 9, weight: .regular))
-                                .foregroundColor(.white)
-                        }
-                        .frame(height: 12)
                     }
-                    .frame(height: 44) 
+                    .frame(height: 7)
+
+                    // 날짜
+                    HStack(spacing: 0) {
+                        Text(entry.startDate)
+                            .font(.system(size: 9, weight: .regular))
+                            .foregroundColor(.white)
+
+                        Spacer()
+
+                        Text(entry.targetDate)
+                            .font(.system(size: 9, weight: .regular))
+                            .foregroundColor(.white)
+                    }
+                    .frame(height: 12)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+                .frame(height: 44)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 22))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
         }
         .widgetURL(URL(string: "baringapp://open"))
     }
@@ -272,7 +262,11 @@ struct BaringWidget: Widget {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             BaringWidgetEntryView(entry: entry)
                 .containerBackground(for: .widget) {
-                    Color.clear
+                    LinearGradient(
+                        gradient: Gradient(colors: gradientColors(for: entry.selectedPreset)),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 }
         }
         .configurationDisplayName("Baring D-Day")
