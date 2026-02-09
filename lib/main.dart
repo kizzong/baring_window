@@ -96,7 +96,7 @@ class _InitialScreenState extends State<InitialScreen> {
   Widget build(BuildContext context) {
     // 로딩 화면 (온보딩 확인 중)
     return const Scaffold(
-      backgroundColor: Color(0xFF050A12),
+      backgroundColor: Color(0xFF0B1623),
       body: Center(child: CircularProgressIndicator(color: Color(0xFF3E7BFF))),
     );
   }
