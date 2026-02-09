@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -41,46 +42,76 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // 이미지 선택 함수 추가 ⭐
-  Future<void> _pickImage() async {
+  // 이미지 크롭 함수
+  Future<String?> _cropImage(String sourcePath) async {
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: sourcePath,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: '프로필 사진 편집',
+          toolbarColor: const Color(0xFF0B1623),
+          toolbarWidgetColor: Colors.white,
+          backgroundColor: const Color(0xFF0B1623),
+          activeControlsWidgetColor: const Color(0xFF2D86FF),
+          cropStyle: CropStyle.circle,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: '프로필 사진 편집',
+          cancelButtonTitle: '취소',
+          doneButtonTitle: '완료',
+          cropStyle: CropStyle.circle,
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+    return croppedFile?.path;
+  }
+
+  // 이미지 선택 → 크롭 → 저장
+  Future<void> _pickAndCropImage(ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 512,
         maxHeight: 512,
         imageQuality: 85,
       );
 
-      if (image != null) {
-        setState(() {
-          profileImagePath = image.path;
-        });
-        await baringBox.put("profileImagePath", image.path);
+      if (image == null) return;
 
-        // 성공 메시지 표시 ⭐
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text(
-                    '프로필 사진이 변경되었습니다',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-              backgroundColor: Color(0xFF22C55E),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              margin: EdgeInsets.all(16),
-              duration: Duration(seconds: 2),
+      final croppedPath = await _cropImage(image.path);
+      if (croppedPath == null) return;
+
+      setState(() {
+        profileImagePath = croppedPath;
+      });
+      await baringBox.put("profileImagePath", croppedPath);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text(
+                  '프로필 사진이 변경되었습니다',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+              ],
             ),
-          );
-        }
+            backgroundColor: Color(0xFF22C55E),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: EdgeInsets.all(16),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       print('이미지 선택 오류: $e');
@@ -184,58 +215,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 title: Text('갤러리에서 선택', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
-                  _pickImage();
+                  _pickAndCropImage(ImageSource.gallery);
                 },
               ),
               ListTile(
                 leading: Icon(Icons.camera_alt, color: Color(0xFF2F80ED)),
                 title: Text('카메라로 촬영', style: TextStyle(color: Colors.white)),
-                onTap: () async {
+                onTap: () {
                   Navigator.pop(context);
-                  try {
-                    final XFile? photo = await _picker.pickImage(
-                      source: ImageSource.camera,
-                      maxWidth: 512,
-                      maxHeight: 512,
-                      imageQuality: 85,
-                    );
-                    if (photo != null) {
-                      setState(() {
-                        profileImagePath = photo.path;
-                      });
-                      await baringBox.put("profileImagePath", photo.path);
-
-                      // 성공 메시지 표시 ⭐
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.white),
-                                SizedBox(width: 12),
-                                Text(
-                                  '프로필 사진이 변경되었습니다',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: Color(0xFF22C55E),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            margin: EdgeInsets.all(16),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    print('카메라 오류: $e');
-                  }
+                  _pickAndCropImage(ImageSource.camera);
                 },
               ),
               if (profileImagePath != null)
