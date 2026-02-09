@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:baring_windows/pages/dday_settings_page.dart';
+import 'package:baring_windows/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
@@ -51,17 +52,122 @@ class _HomePageState extends State<HomePage> {
     return (list as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  void _toggleTodo(int index) {
+  void _scheduleNotificationForTodo(int index, Map<String, dynamic> todo) {
+    final time = todo['time'] as String?;
+    final notifyBefore = todo['notifyBefore'] as int?;
+    if (time == null || notifyBefore == null) return;
+
+    final parts = time.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    final date = DateTime.parse(_todayKey);
+    final scheduledTime = DateTime(date.year, date.month, date.day, hour, minute)
+        .subtract(Duration(minutes: notifyBefore));
+
+    final id = NotificationService.generateId(_todayKey, index);
+    NotificationService.scheduleNotification(
+      id: id,
+      title: todo['title'] ?? '',
+      time: time,
+      notifyBefore: notifyBefore,
+      scheduledTime: scheduledTime,
+    );
+  }
+
+  void _cancelNotificationForTodo(int index) {
+    final id = NotificationService.generateId(_todayKey, index);
+    NotificationService.cancelNotification(id);
+  }
+
+  void _performToggle(int index, Map<String, dynamic> todo, bool newDone) {
     final raw = baringBox.get('todos');
     if (raw == null) return;
     final Map data = Map.from(raw);
     final list = data[_todayKey];
     if (list == null || index >= (list as List).length) return;
     final todos = list.map((e) => Map<String, dynamic>.from(e)).toList();
-    todos[index]['done'] = !(todos[index]['done'] as bool);
+    todos[index]['done'] = newDone;
     data[_todayKey] = todos;
     baringBox.put('todos', data);
     setState(() {});
+  }
+
+  void _toggleTodo(int index) {
+    final todos = _getTodayTodos();
+    if (index >= todos.length) return;
+
+    final todo = todos[index];
+    final isDone = todo['done'] == true;
+    final hasNotification = todo['time'] != null && todo['notifyBefore'] != null;
+
+    // 알림이 있는 할 일을 완료 체크하는 경우 → 확인 다이얼로그
+    if (!isDone && hasNotification) {
+      final notifyBefore = todo['notifyBefore'] as int;
+      final notifyLabel = notifyBefore >= 60
+          ? '${notifyBefore ~/ 60}시간 전'
+          : '$notifyBefore분 전';
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1A2332),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            '할 일 완료',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
+          content: Text(
+            '${todo['time']} ${todo['title']}\n\n'
+            '설정된 알림($notifyLabel)이 취소됩니다.\n완료 처리하시겠습니까?',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                '취소',
+                style: TextStyle(color: Colors.white.withOpacity(0.5)),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _performToggle(index, todo, true);
+                _cancelNotificationForTodo(index);
+              },
+              child: const Text(
+                '완료',
+                style: TextStyle(
+                  color: Color(0xFF2D86FF),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // 완료된 할 일을 체크 해제하는 경우 → 알림 재예약
+    if (isDone && hasNotification) {
+      _performToggle(index, todo, false);
+      _scheduleNotificationForTodo(index, todo);
+      return;
+    }
+
+    // 알림 없는 할 일 → 기존 동작
+    _performToggle(index, todo, !isDone);
   }
 
   @override
@@ -338,6 +444,29 @@ class _HomePageState extends State<HomePage> {
                                                         : const Color(0xFF2D86FF).withOpacity(0.7),
                                                   ),
                                                 ),
+                                                if (todo['notifyBefore'] != null) ...[
+                                                  const SizedBox(width: 6),
+                                                  Icon(
+                                                    Icons.notifications_active_outlined,
+                                                    size: 13,
+                                                    color: isDone
+                                                        ? Colors.white.withOpacity(0.3)
+                                                        : Colors.white.withOpacity(0.4),
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    (todo['notifyBefore'] as int) >= 60
+                                                        ? '${(todo['notifyBefore'] as int) ~/ 60}시간 전'
+                                                        : '${todo['notifyBefore']}분 전',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: isDone
+                                                          ? Colors.white.withOpacity(0.3)
+                                                          : Colors.white.withOpacity(0.4),
+                                                    ),
+                                                  ),
+                                                ],
                                               ],
                                             ),
                                           ],
