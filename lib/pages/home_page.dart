@@ -255,26 +255,25 @@ class _HomePageState extends State<HomePage> {
                             padding: EdgeInsets.only(
                               bottom: i < todayTodos.length - 1 ? 10 : 0,
                             ),
-                            child: Container(
-                              padding: const EdgeInsets.fromLTRB(
-                                14,
-                                14,
-                                12,
-                                14,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0F1F2E),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.06),
+                            child: GestureDetector(
+                              onTap: () => _toggleTodo(i),
+                              child: Container(
+                                padding: const EdgeInsets.fromLTRB(
+                                  14,
+                                  14,
+                                  12,
+                                  14,
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  InkWell(
-                                    borderRadius: BorderRadius.circular(10),
-                                    onTap: () => _toggleTodo(i),
-                                    child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F1F2E),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.06),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
                                       height: 26,
                                       width: 26,
                                       decoration: BoxDecoration(
@@ -297,26 +296,56 @@ class _HomePageState extends State<HomePage> {
                                             )
                                           : null,
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      todo['title'] ?? '',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 16,
-                                        decoration: isDone
-                                            ? TextDecoration.lineThrough
-                                            : null,
-                                        color: isDone
-                                            ? Colors.white.withOpacity(0.45)
-                                            : Colors.white,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            todo['title'] ?? '',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: 16,
+                                              decoration: isDone
+                                                  ? TextDecoration.lineThrough
+                                                  : null,
+                                              color: isDone
+                                                  ? Colors.white.withOpacity(0.45)
+                                                  : Colors.white,
+                                            ),
+                                          ),
+                                          if (todo['time'] != null) ...[
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.access_time_rounded,
+                                                  size: 13,
+                                                  color: isDone
+                                                      ? Colors.white.withOpacity(0.3)
+                                                      : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  todo['time'],
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isDone
+                                                        ? Colors.white.withOpacity(0.3)
+                                                        : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           );

@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:baring_windows/services/notification_service.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive/hive.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -59,27 +62,145 @@ class _TodoPageState extends State<TodoPage> {
     return _todos[_dayKey(day)] ?? [];
   }
 
-  void _addTodo(String title) {
+  void _addTodo(String title, {String? time, int? notifyBefore}) {
     final key = _dayKey(_selectedDay);
     _todos.putIfAbsent(key, () => []);
-    _todos[key]!.add({'title': title, 'done': false});
+    final todo = <String, dynamic>{'title': title, 'done': false};
+    if (time != null) todo['time'] = time;
+    if (notifyBefore != null) todo['notifyBefore'] = notifyBefore;
+    _todos[key]!.add(todo);
     _saveTodos();
     setState(() {});
+
+    // 알림 스케줄
+    if (time != null && notifyBefore != null) {
+      final index = _todos[key]!.length - 1;
+      _scheduleNotificationForTodo(key, index, todo);
+    }
+  }
+
+  void _scheduleNotificationForTodo(
+      String key, int index, Map<String, dynamic> todo) {
+    final time = todo['time'] as String?;
+    final notifyBefore = todo['notifyBefore'] as int?;
+    if (time == null || notifyBefore == null) return;
+
+    final parts = time.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    final date = DateTime.parse(key);
+    final scheduledTime = DateTime(date.year, date.month, date.day, hour, minute)
+        .subtract(Duration(minutes: notifyBefore));
+
+    final id = NotificationService.generateId(key, index);
+    NotificationService.scheduleNotification(
+      id: id,
+      title: todo['title'] ?? '',
+      time: time,
+      notifyBefore: notifyBefore,
+      scheduledTime: scheduledTime,
+    );
+  }
+
+  void _cancelNotificationForTodo(String key, int index) {
+    final id = NotificationService.generateId(key, index);
+    NotificationService.cancelNotification(id);
   }
 
   void _toggleTodo(int index) {
     final key = _dayKey(_selectedDay);
-    if (_todos[key] != null && index < _todos[key]!.length) {
-      _todos[key]![index]['done'] = !_todos[key]![index]['done'];
+    if (_todos[key] == null || index >= _todos[key]!.length) return;
+
+    final todo = _todos[key]![index];
+    final isDone = todo['done'] == true;
+    final hasNotification = todo['time'] != null && todo['notifyBefore'] != null;
+
+    // 알림이 있는 할 일을 완료 체크하는 경우 → 확인 다이얼로그
+    if (!isDone && hasNotification) {
+      final notifyBefore = todo['notifyBefore'] as int;
+      final notifyLabel = notifyBefore >= 60
+          ? '${notifyBefore ~/ 60}시간 전'
+          : '$notifyBefore분 전';
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1A2332),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            '할 일 완료',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
+          content: Text(
+            '${todo['time']} ${todo['title']}\n\n'
+            '설정된 알림($notifyLabel)이 취소됩니다.\n완료 처리하시겠습니까?',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                '취소',
+                style: TextStyle(color: Colors.white.withOpacity(0.5)),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _todos[key]![index]['done'] = true;
+                _cancelNotificationForTodo(key, index);
+                _saveTodos();
+                setState(() {});
+              },
+              child: const Text(
+                '완료',
+                style: TextStyle(
+                  color: Color(0xFF2D86FF),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // 완료된 할 일을 체크 해제하는 경우 → 알림 재예약
+    if (isDone && hasNotification) {
+      _todos[key]![index]['done'] = false;
+      _scheduleNotificationForTodo(key, index, _todos[key]![index]);
       _saveTodos();
       setState(() {});
+      return;
     }
+
+    // 알림 없는 할 일 → 기존 동작
+    _todos[key]![index]['done'] = !isDone;
+    _saveTodos();
+    setState(() {});
   }
 
   void _deleteTodo(int index) {
     final key = _dayKey(_selectedDay);
     if (_todos[key] != null && index < _todos[key]!.length) {
       final removed = _todos[key]!.removeAt(index);
+
+      // 알림 취소
+      if (removed['time'] != null && removed['notifyBefore'] != null) {
+        _cancelNotificationForTodo(key, index);
+      }
+
       if (_todos[key]!.isEmpty) {
         _todos.remove(key);
       }
@@ -111,6 +232,11 @@ class _TodoPageState extends State<TodoPage> {
               _todos[key]!.insert(index, removed);
               _saveTodos();
               setState(() {});
+
+              // 되돌리기 시 알림 재스케줄
+              if (removed['time'] != null && removed['notifyBefore'] != null) {
+                _scheduleNotificationForTodo(key, index, removed);
+              }
             },
           ),
         ),
@@ -118,76 +244,329 @@ class _TodoPageState extends State<TodoPage> {
     }
   }
 
+  void _reorderTodo(int oldIndex, int newIndex) {
+    final key = _dayKey(_selectedDay);
+    if (_todos[key] == null) return;
+    if (newIndex > oldIndex) newIndex--;
+    final item = _todos[key]!.removeAt(oldIndex);
+    _todos[key]!.insert(newIndex, item);
+    _saveTodos();
+    setState(() {});
+  }
+
   void _showAddDialog() {
     final controller = TextEditingController();
     final focusNode = FocusNode();
+    TimeOfDay? selectedTime;
+    int? selectedNotifyBefore;
+
+    const notifyOptions = [
+      {'label': '없음', 'value': null},
+      {'label': '5분 전', 'value': 5},
+      {'label': '10분 전', 'value': 10},
+      {'label': '15분 전', 'value': 15},
+      {'label': '30분 전', 'value': 30},
+      {'label': '1시간 전', 'value': 60},
+    ];
+
     showDialog(
       context: context,
       builder: (ctx) {
         Future.delayed(const Duration(milliseconds: 100), () {
           focusNode.requestFocus();
         });
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1A2332),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            '할 일 추가',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-            ),
-          ),
-          content: TextField(
-            controller: controller,
-            focusNode: focusNode,
-            autofocus: true,
-            maxLength: 20,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: '할 일을 입력하세요',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-              counterStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
-              ),
-              focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF2D86FF)),
-              ),
-            ),
-            onSubmitted: (value) {
-              if (value.trim().isNotEmpty) {
-                _addTodo(value.trim());
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            void submit() {
+              if (controller.text.trim().isNotEmpty) {
+                String? timeStr;
+                if (selectedTime != null) {
+                  timeStr =
+                      '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+                }
+                _addTodo(
+                  controller.text.trim(),
+                  time: timeStr,
+                  notifyBefore: selectedTime != null ? selectedNotifyBefore : null,
+                );
                 Navigator.pop(ctx);
               }
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(
-                '취소',
-                style: TextStyle(color: Colors.white.withOpacity(0.5)),
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1A2332),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-            ),
-            TextButton(
-              onPressed: () {
-                if (controller.text.trim().isNotEmpty) {
-                  _addTodo(controller.text.trim());
-                  Navigator.pop(ctx);
-                }
-              },
-              child: const Text(
-                '추가',
+              title: const Text(
+                '할 일 추가',
                 style: TextStyle(
-                  color: Color(0xFF2D86FF),
-                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
                 ),
               ),
-            ),
-          ],
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      autofocus: true,
+                      maxLength: 20,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: '할 일을 입력하세요',
+                        hintStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                        counterStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Colors.white.withOpacity(0.15)),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF2D86FF)),
+                        ),
+                      ),
+                      onSubmitted: (_) => submit(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 시간 선택
+                    GestureDetector(
+                      onTap: () async {
+                        DateTime tempTime = DateTime(
+                          2000, 1, 1,
+                          selectedTime?.hour ?? TimeOfDay.now().hour,
+                          selectedTime?.minute ?? TimeOfDay.now().minute,
+                        );
+                        await showCupertinoModalPopup(
+                          context: context,
+                          builder: (pickerCtx) {
+                            return Container(
+                              height: 300,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF1A2332),
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        CupertinoButton(
+                                          padding: EdgeInsets.zero,
+                                          child: Text(
+                                            '취소',
+                                            style: TextStyle(
+                                              color: Colors.white
+                                                  .withOpacity(0.5),
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.pop(pickerCtx),
+                                        ),
+                                        CupertinoButton(
+                                          padding: EdgeInsets.zero,
+                                          child: const Text(
+                                            '확인',
+                                            style: TextStyle(
+                                              color: Color(0xFF2D86FF),
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            setDialogState(() {
+                                              selectedTime = TimeOfDay(
+                                                hour: tempTime.hour,
+                                                minute: tempTime.minute,
+                                              );
+                                            });
+                                            Navigator.pop(pickerCtx);
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Localizations(
+                                      locale: const Locale('ko', 'KR'),
+                                      delegates: const [
+                                        GlobalCupertinoLocalizations.delegate,
+                                        GlobalMaterialLocalizations.delegate,
+                                        GlobalWidgetsLocalizations.delegate,
+                                      ],
+                                      child: CupertinoTheme(
+                                        data: const CupertinoThemeData(
+                                          brightness: Brightness.dark,
+                                          textTheme: CupertinoTextThemeData(
+                                            dateTimePickerTextStyle: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 22,
+                                            ),
+                                          ),
+                                        ),
+                                        child: CupertinoDatePicker(
+                                          mode: CupertinoDatePickerMode.time,
+                                          initialDateTime: tempTime,
+                                          use24hFormat: false,
+                                          onDateTimeChanged: (dt) {
+                                            tempTime = dt;
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selectedTime != null
+                                ? const Color(0xFF2D86FF).withOpacity(0.5)
+                                : Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.access_time_rounded,
+                              size: 20,
+                              color: selectedTime != null
+                                  ? const Color(0xFF2D86FF)
+                                  : Colors.white.withOpacity(0.4),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              selectedTime != null
+                                  ? '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}'
+                                  : '시간 선택 (선택사항)',
+                              style: TextStyle(
+                                color: selectedTime != null
+                                    ? Colors.white
+                                    : Colors.white.withOpacity(0.4),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (selectedTime != null)
+                              GestureDetector(
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedTime = null;
+                                    selectedNotifyBefore = null;
+                                  });
+                                },
+                                child: Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: Colors.white.withOpacity(0.4),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 알림 선택 (시간이 설정된 경우에만)
+                    if (selectedTime != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        '알림',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: notifyOptions.map((option) {
+                          final value = option['value'] as int?;
+                          final isSelected =
+                              selectedNotifyBefore == value;
+                          return GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                selectedNotifyBefore = value;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
+                                    : Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? const Color(0xFF2D86FF)
+                                      : Colors.white.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Text(
+                                option['label'] as String,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? const Color(0xFF2D86FF)
+                                      : Colors.white.withOpacity(0.6),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    '취소',
+                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: submit,
+                  child: const Text(
+                    '추가',
+                    style: TextStyle(
+                      color: Color(0xFF2D86FF),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -372,17 +751,30 @@ class _TodoPageState extends State<TodoPage> {
                       ],
                     ),
                   )
-                : ListView.builder(
+                : ReorderableListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: todosForDay.length,
+                    onReorder: _reorderTodo,
+                    proxyDecorator: (child, index, animation) {
+                      return Material(
+                        color: Colors.transparent,
+                        elevation: 6,
+                        shadowColor: Colors.black54,
+                        borderRadius: BorderRadius.circular(18),
+                        child: child,
+                      );
+                    },
                     itemBuilder: (context, index) {
                       final todo = todosForDay[index];
                       final isDone = todo['done'] == true;
+                      final timeStr = todo['time'] as String?;
+                      final notifyBefore = todo['notifyBefore'] as int?;
 
                       return Padding(
+                        key: ValueKey('$selectedKey-$index-${todo['title']}'),
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Dismissible(
-                          key: ValueKey('$selectedKey-$index-${todo['title']}'),
+                          key: ValueKey('dismiss-$selectedKey-$index-${todo['title']}'),
                           direction: DismissDirection.endToStart,
                           onDismissed: (_) => _deleteTodo(index),
                           background: Container(
@@ -397,7 +789,9 @@ class _TodoPageState extends State<TodoPage> {
                               color: Colors.red,
                             ),
                           ),
-                          child: Container(
+                          child: GestureDetector(
+                            onTap: () => _toggleTodo(index),
+                            child: Container(
                             padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
                             decoration: BoxDecoration(
                               color: const Color(0xFF121E2B),
@@ -408,10 +802,7 @@ class _TodoPageState extends State<TodoPage> {
                             ),
                             child: Row(
                               children: [
-                                InkWell(
-                                  borderRadius: BorderRadius.circular(10),
-                                  onTap: () => _toggleTodo(index),
-                                  child: Container(
+                                Container(
                                     height: 26,
                                     width: 26,
                                     decoration: BoxDecoration(
@@ -433,24 +824,76 @@ class _TodoPageState extends State<TodoPage> {
                                             color: Colors.white,
                                           )
                                         : null,
-                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: Text(
-                                    todo['title'] ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                      decoration: isDone
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                      color: isDone
-                                          ? Colors.white.withOpacity(0.45)
-                                          : Colors.white,
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        todo['title'] ?? '',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                          decoration: isDone
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                          color: isDone
+                                              ? Colors.white.withOpacity(0.45)
+                                              : Colors.white,
+                                        ),
+                                      ),
+                                      if (timeStr != null) ...[
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.access_time_rounded,
+                                              size: 13,
+                                              color: isDone
+                                                  ? Colors.white.withOpacity(0.3)
+                                                  : const Color(0xFF2D86FF).withOpacity(0.7),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              timeStr,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDone
+                                                    ? Colors.white.withOpacity(0.3)
+                                                    : const Color(0xFF2D86FF).withOpacity(0.7),
+                                              ),
+                                            ),
+                                            if (notifyBefore != null) ...[
+                                              const SizedBox(width: 6),
+                                              Icon(
+                                                Icons.notifications_active_outlined,
+                                                size: 13,
+                                                color: isDone
+                                                    ? Colors.white.withOpacity(0.3)
+                                                    : Colors.white.withOpacity(0.4),
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                notifyBefore >= 60
+                                                    ? '${notifyBefore ~/ 60}시간 전'
+                                                    : '$notifyBefore분 전',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: isDone
+                                                      ? Colors.white.withOpacity(0.3)
+                                                      : Colors.white.withOpacity(0.4),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
                                 IconButton(
@@ -469,17 +912,13 @@ class _TodoPageState extends State<TodoPage> {
                               ],
                             ),
                           ),
+                          ),
                         ),
                       );
                     },
                   ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        backgroundColor: const Color(0xFF2D86FF),
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

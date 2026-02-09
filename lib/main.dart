@@ -5,6 +5,7 @@ import 'package:baring_windows/pages/home_page.dart';
 import 'package:baring_windows/pages/todo_page.dart';
 import 'package:baring_windows/pages/profile_page.dart';
 // import 'package:baring_windows/pages/dday_settings_page.dart';
+import 'package:baring_windows/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/adapters.dart';
@@ -20,6 +21,9 @@ void main() async {
 
   // 위젯 초기화 ⭐
   await WidgetService.updateWidget(); // ⭐ 주석 해제
+
+  // 알림 초기화
+  await NotificationService.init();
 
   // ⭐⭐⭐ 테스트용: 온보딩 리셋 (테스트 끝나면 삭제하세요!)
   // await OnboardingService.resetOnboarding();
