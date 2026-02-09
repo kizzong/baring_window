@@ -41,7 +41,72 @@ class _HomePageState extends State<HomePage> {
     return (_calculateProgress(startDate, targetDate) * 100).round();
   }
 
+  static const _dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+
   String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  // ── 루틴 관련 ──
+
+  List<Map<String, dynamic>> _getTodayRoutines() {
+    final raw = baringBox.get('routines');
+    if (raw == null) return [];
+    final allRoutines = (raw as List)
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final weekday = DateTime.now().weekday; // 1=월 ~ 7=일
+    return allRoutines.where((r) {
+      if (r['type'] == 'daily') return true;
+      if (r['type'] == 'weekly') {
+        final days = List<int>.from(r['days'] ?? []);
+        return days.contains(weekday);
+      }
+      return false;
+    }).toList();
+  }
+
+  bool _isRoutineCompletedToday(Map<String, dynamic> routine) {
+    final completions = Map<String, dynamic>.from(routine['completions'] ?? {});
+    return completions[_todayKey] == true;
+  }
+
+  void _toggleRoutine(int index) {
+    final todayRoutines = _getTodayRoutines();
+    if (index >= todayRoutines.length) return;
+
+    final routine = todayRoutines[index];
+    final routineId = routine['id'];
+
+    // 전체 루틴 리스트에서 해당 루틴 찾기
+    final raw = baringBox.get('routines');
+    if (raw == null) return;
+    final allRoutines = (raw as List)
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final globalIndex = allRoutines.indexWhere((r) => r['id'] == routineId);
+    if (globalIndex == -1) return;
+
+    final completions = Map<String, dynamic>.from(
+        allRoutines[globalIndex]['completions'] ?? {});
+    completions[_todayKey] = !(completions[_todayKey] == true);
+    allRoutines[globalIndex]['completions'] = completions;
+
+    baringBox.put('routines', allRoutines);
+    setState(() {});
+  }
+
+  String _routineSubtitle(Map<String, dynamic> routine) {
+    final type = routine['type'] as String;
+    final time = routine['time'] as String?;
+    final parts = <String>[];
+    if (type == 'daily') {
+      parts.add('매일');
+    } else {
+      final days = List<int>.from(routine['days'] ?? []);
+      parts.add(days.map((d) => _dayNames[d - 1]).join(','));
+    }
+    if (time != null) parts.add(time);
+    return parts.join(' · ');
+  }
 
   List<Map<String, dynamic>> _getTodayTodos() {
     final raw = baringBox.get('todos');
@@ -276,6 +341,178 @@ class _HomePageState extends State<HomePage> {
                     MaterialPageRoute(builder: (context) => DDaySettingsPage()),
                   );
                   setState(() {}); // 돌아왔을 때 데이터 새로고침
+                },
+              ),
+              const SizedBox(height: 32),
+
+              // 오늘의 루틴
+              Builder(
+                builder: (context) {
+                  final todayRoutines = _getTodayRoutines();
+                  final routineDoneCount = todayRoutines
+                      .where((r) => _isRoutineCompletedToday(r))
+                      .length;
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.repeat_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            "오늘의 루틴",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (todayRoutines.isNotEmpty) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F2538),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.06),
+                                ),
+                              ),
+                              child: Text(
+                                '$routineDoneCount/${todayRoutines.length}',
+                                style: const TextStyle(
+                                  color: Color(0xFF2D86FF),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                        ],
+                      ),
+                      const SizedBox(height: 15),
+                      if (todayRoutines.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F1F2E),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.06),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '오늘의 루틴이 없습니다',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.3),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...List.generate(todayRoutines.length, (i) {
+                          final routine = todayRoutines[i];
+                          final isDone = _isRoutineCompletedToday(routine);
+                          final subtitle = _routineSubtitle(routine);
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: i < todayRoutines.length - 1 ? 10 : 0,
+                            ),
+                            child: GestureDetector(
+                              onTap: () => _toggleRoutine(i),
+                              child: Container(
+                                padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F1F2E),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.06),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.repeat_rounded,
+                                      size: 18,
+                                      color: isDone
+                                          ? Colors.white.withOpacity(0.3)
+                                          : const Color(0xFF2D86FF).withOpacity(0.7),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      height: 26,
+                                      width: 26,
+                                      decoration: BoxDecoration(
+                                        color: isDone
+                                            ? const Color(0xFF2D86FF)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isDone
+                                              ? Colors.transparent
+                                              : Colors.white.withOpacity(0.18),
+                                          width: 1.6,
+                                        ),
+                                      ),
+                                      child: isDone
+                                          ? const Icon(
+                                              Icons.check,
+                                              size: 18,
+                                              color: Colors.white,
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            routine['title'] ?? '',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: 16,
+                                              decoration: isDone
+                                                  ? TextDecoration.lineThrough
+                                                  : null,
+                                              color: isDone
+                                                  ? Colors.white.withOpacity(0.45)
+                                                  : Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            subtitle,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDone
+                                                  ? Colors.white.withOpacity(0.3)
+                                                  : Colors.white.withOpacity(0.5),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                    ],
+                  );
                 },
               ),
               const SizedBox(height: 32),

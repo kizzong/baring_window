@@ -22,16 +22,22 @@ class _TodoPageState extends State<TodoPage> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
 
   Map<String, List<Map<String, dynamic>>> _todos = {};
+  List<Map<String, dynamic>> _routines = [];
+
+  static const _dayNames = ['월', '화', '수', '목', '금', '토', '일'];
 
   @override
   void initState() {
     super.initState();
     _loadTodos();
+    _loadRoutines();
   }
 
   String _dayKey(DateTime day) {
     return DateFormat('yyyy-MM-dd').format(day);
   }
+
+  // ── Todo 데이터 관리 ──
 
   void _loadTodos() {
     final raw = _box.get('todos');
@@ -254,6 +260,197 @@ class _TodoPageState extends State<TodoPage> {
     setState(() {});
   }
 
+  // ── 루틴 데이터 관리 ──
+
+  void _loadRoutines() {
+    final raw = _box.get('routines');
+    if (raw != null) {
+      _routines = (raw as List)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+  }
+
+  void _saveRoutines() {
+    _box.put(
+      'routines',
+      _routines.map((e) {
+        final copy = Map<String, dynamic>.from(e);
+        // completions를 Map으로 유지
+        if (copy['completions'] != null) {
+          copy['completions'] = Map<String, dynamic>.from(copy['completions']);
+        }
+        // days를 List로 유지
+        if (copy['days'] != null) {
+          copy['days'] = List<int>.from(copy['days']);
+        }
+        return copy;
+      }).toList(),
+    );
+  }
+
+  List<Map<String, dynamic>> _getRoutinesForDay(DateTime day) {
+    final weekday = day.weekday; // 1=월 ~ 7=일
+    return _routines.where((r) {
+      if (r['type'] == 'daily') return true;
+      if (r['type'] == 'weekly') {
+        final days = List<int>.from(r['days'] ?? []);
+        return days.contains(weekday);
+      }
+      return false;
+    }).toList();
+  }
+
+  bool _isRoutineCompletedForDay(Map<String, dynamic> routine, DateTime day) {
+    final completions = Map<String, dynamic>.from(routine['completions'] ?? {});
+    return completions[_dayKey(day)] == true;
+  }
+
+  void _addRoutine(String title, {
+    required String type,
+    List<int>? days,
+    String? time,
+    int? notifyBefore,
+  }) {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final routine = <String, dynamic>{
+      'id': id,
+      'title': title,
+      'type': type,
+      'completions': <String, dynamic>{},
+    };
+    if (type == 'weekly' && days != null) routine['days'] = days;
+    if (time != null) routine['time'] = time;
+    if (notifyBefore != null) routine['notifyBefore'] = notifyBefore;
+    _routines.add(routine);
+    _saveRoutines();
+    setState(() {});
+
+    // 알림 스케줄
+    if (time != null && notifyBefore != null) {
+      _scheduleRoutineNotification(routine);
+    }
+  }
+
+  void _toggleRoutine(int routineIndex) {
+    final routinesForDay = _getRoutinesForDay(_selectedDay);
+    if (routineIndex >= routinesForDay.length) return;
+
+    final routine = routinesForDay[routineIndex];
+    final globalIndex = _routines.indexWhere((r) => r['id'] == routine['id']);
+    if (globalIndex == -1) return;
+
+    final key = _dayKey(_selectedDay);
+    final completions = Map<String, dynamic>.from(
+        _routines[globalIndex]['completions'] ?? {});
+    completions[key] = !(completions[key] == true);
+    _routines[globalIndex]['completions'] = completions;
+    _saveRoutines();
+    setState(() {});
+  }
+
+  void _deleteRoutine(int routineIndex) {
+    final routinesForDay = _getRoutinesForDay(_selectedDay);
+    if (routineIndex >= routinesForDay.length) return;
+
+    final routine = routinesForDay[routineIndex];
+    final globalIndex = _routines.indexWhere((r) => r['id'] == routine['id']);
+    if (globalIndex == -1) return;
+
+    final removed = _routines.removeAt(globalIndex);
+
+    // 알림 취소
+    if (removed['time'] != null && removed['notifyBefore'] != null) {
+      _cancelRoutineNotification(removed);
+    }
+
+    _saveRoutines();
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '"${removed['title']}" 루틴 삭제됨',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white60,
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
+        backgroundColor: const Color(0xFF1A2332),
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: '되돌리기',
+          textColor: const Color(0xFF2D86FF),
+          onPressed: () {
+            _routines.insert(globalIndex, removed);
+            _saveRoutines();
+            setState(() {});
+
+            if (removed['time'] != null && removed['notifyBefore'] != null) {
+              _scheduleRoutineNotification(removed);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  void _scheduleRoutineNotification(Map<String, dynamic> routine) {
+    final time = routine['time'] as String?;
+    final notifyBefore = routine['notifyBefore'] as int?;
+    final id = routine['id'] as String;
+    if (time == null || notifyBefore == null) return;
+
+    final type = routine['type'] as String;
+
+    if (type == 'daily') {
+      final notifId = NotificationService.generateRoutineId(id);
+      NotificationService.scheduleRoutineNotification(
+        id: notifId,
+        title: routine['title'] ?? '',
+        time: time,
+        notifyBefore: notifyBefore,
+        type: 'daily',
+      );
+    } else if (type == 'weekly') {
+      final days = List<int>.from(routine['days'] ?? []);
+      for (final weekday in days) {
+        final notifId = NotificationService.generateRoutineId('${id}_$weekday');
+        NotificationService.scheduleRoutineNotification(
+          id: notifId,
+          title: routine['title'] ?? '',
+          time: time,
+          notifyBefore: notifyBefore,
+          type: 'weekly',
+          weekday: weekday,
+        );
+      }
+    }
+  }
+
+  void _cancelRoutineNotification(Map<String, dynamic> routine) {
+    final id = routine['id'] as String;
+    final type = routine['type'] as String;
+
+    if (type == 'daily') {
+      final notifId = NotificationService.generateRoutineId(id);
+      NotificationService.cancelRoutineNotification(notifId);
+    } else if (type == 'weekly') {
+      final days = List<int>.from(routine['days'] ?? []);
+      for (final weekday in days) {
+        final notifId = NotificationService.generateRoutineId('${id}_$weekday');
+        NotificationService.cancelRoutineNotification(notifId);
+      }
+    }
+  }
+
+  // ── 다이얼로그 ──
+
   void _showAddDialog() {
     final controller = TextEditingController();
     final focusNode = FocusNode();
@@ -337,210 +534,28 @@ class _TodoPageState extends State<TodoPage> {
                     const SizedBox(height: 16),
 
                     // 시간 선택
-                    GestureDetector(
-                      onTap: () async {
-                        DateTime tempTime = DateTime(
-                          2000, 1, 1,
-                          selectedTime?.hour ?? TimeOfDay.now().hour,
-                          selectedTime?.minute ?? TimeOfDay.now().minute,
-                        );
-                        await showCupertinoModalPopup(
-                          context: context,
-                          builder: (pickerCtx) {
-                            return Container(
-                              height: 300,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF1A2332),
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        CupertinoButton(
-                                          padding: EdgeInsets.zero,
-                                          child: Text(
-                                            '취소',
-                                            style: TextStyle(
-                                              color: Colors.white
-                                                  .withOpacity(0.5),
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          onPressed: () =>
-                                              Navigator.pop(pickerCtx),
-                                        ),
-                                        CupertinoButton(
-                                          padding: EdgeInsets.zero,
-                                          child: const Text(
-                                            '확인',
-                                            style: TextStyle(
-                                              color: Color(0xFF2D86FF),
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          onPressed: () {
-                                            setDialogState(() {
-                                              selectedTime = TimeOfDay(
-                                                hour: tempTime.hour,
-                                                minute: tempTime.minute,
-                                              );
-                                            });
-                                            Navigator.pop(pickerCtx);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Localizations(
-                                      locale: const Locale('ko', 'KR'),
-                                      delegates: const [
-                                        GlobalCupertinoLocalizations.delegate,
-                                        GlobalMaterialLocalizations.delegate,
-                                        GlobalWidgetsLocalizations.delegate,
-                                      ],
-                                      child: CupertinoTheme(
-                                        data: const CupertinoThemeData(
-                                          brightness: Brightness.dark,
-                                          textTheme: CupertinoTextThemeData(
-                                            dateTimePickerTextStyle: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 22,
-                                            ),
-                                          ),
-                                        ),
-                                        child: CupertinoDatePicker(
-                                          mode: CupertinoDatePickerMode.time,
-                                          initialDateTime: tempTime,
-                                          use24hFormat: false,
-                                          onDateTimeChanged: (dt) {
-                                            tempTime = dt;
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        );
+                    _buildTimePickerButton(
+                      selectedTime: selectedTime,
+                      onTimeSelected: (time) {
+                        setDialogState(() => selectedTime = time);
                       },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: selectedTime != null
-                                ? const Color(0xFF2D86FF).withOpacity(0.5)
-                                : Colors.white.withOpacity(0.1),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.access_time_rounded,
-                              size: 20,
-                              color: selectedTime != null
-                                  ? const Color(0xFF2D86FF)
-                                  : Colors.white.withOpacity(0.4),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              selectedTime != null
-                                  ? '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}'
-                                  : '시간 선택 (선택사항)',
-                              style: TextStyle(
-                                color: selectedTime != null
-                                    ? Colors.white
-                                    : Colors.white.withOpacity(0.4),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const Spacer(),
-                            if (selectedTime != null)
-                              GestureDetector(
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedTime = null;
-                                    selectedNotifyBefore = null;
-                                  });
-                                },
-                                child: Icon(
-                                  Icons.close,
-                                  size: 18,
-                                  color: Colors.white.withOpacity(0.4),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                      onTimeClear: () {
+                        setDialogState(() {
+                          selectedTime = null;
+                          selectedNotifyBefore = null;
+                        });
+                      },
                     ),
 
                     // 알림 선택 (시간이 설정된 경우에만)
                     if (selectedTime != null) ...[
                       const SizedBox(height: 12),
-                      Text(
-                        '알림',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: notifyOptions.map((option) {
-                          final value = option['value'] as int?;
-                          final isSelected =
-                              selectedNotifyBefore == value;
-                          return GestureDetector(
-                            onTap: () {
-                              setDialogState(() {
-                                selectedNotifyBefore = value;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? const Color(0xFF2D86FF)
-                                      : Colors.white.withOpacity(0.1),
-                                ),
-                              ),
-                              child: Text(
-                                option['label'] as String,
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? const Color(0xFF2D86FF)
-                                      : Colors.white.withOpacity(0.6),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                      _buildNotifyOptions(
+                        notifyOptions: notifyOptions,
+                        selectedNotifyBefore: selectedNotifyBefore,
+                        onSelected: (value) {
+                          setDialogState(() => selectedNotifyBefore = value);
+                        },
                       ),
                     ],
                   ],
@@ -572,11 +587,525 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
+  void _showAddRoutineDialog() {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    String routineType = 'daily';
+    List<int> selectedDays = [];
+    TimeOfDay? selectedTime;
+    int? selectedNotifyBefore;
+
+    const notifyOptions = [
+      {'label': '없음', 'value': null},
+      {'label': '5분 전', 'value': 5},
+      {'label': '10분 전', 'value': 10},
+      {'label': '15분 전', 'value': 15},
+      {'label': '30분 전', 'value': 30},
+      {'label': '1시간 전', 'value': 60},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          focusNode.requestFocus();
+        });
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            void submit() {
+              final title = controller.text.trim();
+              if (title.isEmpty) return;
+              if (routineType == 'weekly' && selectedDays.isEmpty) return;
+
+              String? timeStr;
+              if (selectedTime != null) {
+                timeStr =
+                    '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+              }
+              _addRoutine(
+                title,
+                type: routineType,
+                days: routineType == 'weekly' ? (List<int>.from(selectedDays)..sort()) : null,
+                time: timeStr,
+                notifyBefore: selectedTime != null ? selectedNotifyBefore : null,
+              );
+              Navigator.pop(ctx);
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1A2332),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                '루틴 추가',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 루틴 이름 입력
+                    TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      autofocus: true,
+                      maxLength: 20,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: '루틴 이름을 입력하세요',
+                        hintStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                        counterStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Colors.white.withOpacity(0.15)),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF2D86FF)),
+                        ),
+                      ),
+                      onSubmitted: (_) => submit(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 반복 유형 선택
+                    Text(
+                      '반복',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                routineType = 'daily';
+                                selectedDays = [];
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: routineType == 'daily'
+                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
+                                    : Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: routineType == 'daily'
+                                      ? const Color(0xFF2D86FF)
+                                      : Colors.white.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '매일',
+                                  style: TextStyle(
+                                    color: routineType == 'daily'
+                                        ? const Color(0xFF2D86FF)
+                                        : Colors.white.withOpacity(0.6),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setDialogState(() => routineType = 'weekly');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: routineType == 'weekly'
+                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
+                                    : Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: routineType == 'weekly'
+                                      ? const Color(0xFF2D86FF)
+                                      : Colors.white.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '특정 요일',
+                                  style: TextStyle(
+                                    color: routineType == 'weekly'
+                                        ? const Color(0xFF2D86FF)
+                                        : Colors.white.withOpacity(0.6),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // 요일 선택 (특정 요일인 경우)
+                    if (routineType == 'weekly') ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: List.generate(7, (i) {
+                          final day = i + 1; // 1=월 ~ 7=일
+                          final isSelected = selectedDays.contains(day);
+                          return GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                if (isSelected) {
+                                  selectedDays.remove(day);
+                                } else {
+                                  selectedDays.add(day);
+                                }
+                              });
+                            },
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF2D86FF)
+                                    : Colors.white.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.transparent
+                                      : Colors.white.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _dayNames[i],
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white.withOpacity(0.5),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // 시간 선택
+                    _buildTimePickerButton(
+                      selectedTime: selectedTime,
+                      onTimeSelected: (time) {
+                        setDialogState(() => selectedTime = time);
+                      },
+                      onTimeClear: () {
+                        setDialogState(() {
+                          selectedTime = null;
+                          selectedNotifyBefore = null;
+                        });
+                      },
+                    ),
+
+                    // 알림 선택 (시간이 설정된 경우에만)
+                    if (selectedTime != null) ...[
+                      const SizedBox(height: 12),
+                      _buildNotifyOptions(
+                        notifyOptions: notifyOptions,
+                        selectedNotifyBefore: selectedNotifyBefore,
+                        onSelected: (value) {
+                          setDialogState(() => selectedNotifyBefore = value);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    '취소',
+                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: submit,
+                  child: const Text(
+                    '추가',
+                    style: TextStyle(
+                      color: Color(0xFF2D86FF),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ── 공통 위젯 빌더 ──
+
+  Widget _buildTimePickerButton({
+    required TimeOfDay? selectedTime,
+    required void Function(TimeOfDay) onTimeSelected,
+    required VoidCallback onTimeClear,
+  }) {
+    return GestureDetector(
+      onTap: () async {
+        DateTime tempTime = DateTime(
+          2000, 1, 1,
+          selectedTime?.hour ?? TimeOfDay.now().hour,
+          selectedTime?.minute ?? TimeOfDay.now().minute,
+        );
+        await showCupertinoModalPopup(
+          context: context,
+          builder: (pickerCtx) {
+            return Container(
+              height: 300,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1A2332),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          child: Text(
+                            '취소',
+                            style: TextStyle(
+                              color: Colors.white
+                                  .withOpacity(0.5),
+                              fontSize: 16,
+                            ),
+                          ),
+                          onPressed: () =>
+                              Navigator.pop(pickerCtx),
+                        ),
+                        CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          child: const Text(
+                            '확인',
+                            style: TextStyle(
+                              color: Color(0xFF2D86FF),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                          onPressed: () {
+                            onTimeSelected(TimeOfDay(
+                              hour: tempTime.hour,
+                              minute: tempTime.minute,
+                            ));
+                            Navigator.pop(pickerCtx);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Localizations(
+                      locale: const Locale('ko', 'KR'),
+                      delegates: const [
+                        GlobalCupertinoLocalizations.delegate,
+                        GlobalMaterialLocalizations.delegate,
+                        GlobalWidgetsLocalizations.delegate,
+                      ],
+                      child: CupertinoTheme(
+                        data: const CupertinoThemeData(
+                          brightness: Brightness.dark,
+                          textTheme: CupertinoTextThemeData(
+                            dateTimePickerTextStyle: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                            ),
+                          ),
+                        ),
+                        child: CupertinoDatePicker(
+                          mode: CupertinoDatePickerMode.time,
+                          initialDateTime: tempTime,
+                          use24hFormat: false,
+                          onDateTimeChanged: (dt) {
+                            tempTime = dt;
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selectedTime != null
+                ? const Color(0xFF2D86FF).withOpacity(0.5)
+                : Colors.white.withOpacity(0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.access_time_rounded,
+              size: 20,
+              color: selectedTime != null
+                  ? const Color(0xFF2D86FF)
+                  : Colors.white.withOpacity(0.4),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              selectedTime != null
+                  ? '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}'
+                  : '시간 선택 (선택사항)',
+              style: TextStyle(
+                color: selectedTime != null
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.4),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const Spacer(),
+            if (selectedTime != null)
+              GestureDetector(
+                onTap: onTimeClear,
+                child: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: Colors.white.withOpacity(0.4),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotifyOptions({
+    required List<Map<String, Object?>> notifyOptions,
+    required int? selectedNotifyBefore,
+    required void Function(int?) onSelected,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '알림',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.6),
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: notifyOptions.map((option) {
+            final value = option['value'] as int?;
+            final isSelected = selectedNotifyBefore == value;
+            return GestureDetector(
+              onTap: () => onSelected(value),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF2D86FF).withOpacity(0.2)
+                      : Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF2D86FF)
+                        : Colors.white.withOpacity(0.1),
+                  ),
+                ),
+                child: Text(
+                  option['label'] as String,
+                  style: TextStyle(
+                    color: isSelected
+                        ? const Color(0xFF2D86FF)
+                        : Colors.white.withOpacity(0.6),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  String _routineSubtitle(Map<String, dynamic> routine) {
+    final type = routine['type'] as String;
+    final time = routine['time'] as String?;
+    final parts = <String>[];
+
+    if (type == 'daily') {
+      parts.add('매일');
+    } else {
+      final days = List<int>.from(routine['days'] ?? []);
+      parts.add(days.map((d) => _dayNames[d - 1]).join(','));
+    }
+
+    if (time != null) {
+      parts.add(time);
+    }
+
+    return parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final todosForDay = _getTodosForDay(_selectedDay);
+    final routinesForDay = _getRoutinesForDay(_selectedDay);
     final selectedKey = _dayKey(_selectedDay);
     final isToday = isSameDay(_selectedDay, DateTime.now());
+
+    final routineDoneCount = routinesForDay
+        .where((r) => _isRoutineCompletedForDay(r, _selectedDay))
+        .length;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B1623),
@@ -611,7 +1140,51 @@ class _TodoPageState extends State<TodoPage> {
             onPageChanged: (focusedDay) {
               _focusedDay = focusedDay;
             },
-            eventLoader: (day) => _getTodosForDay(day),
+            eventLoader: (day) {
+              final todos = _getTodosForDay(day);
+              final routines = _getRoutinesForDay(day);
+              final count = todos.length + routines.length;
+              return List.generate(count.clamp(0, 4), (_) => '');
+            },
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, day, events) {
+                final hasTodos = _getTodosForDay(day).isNotEmpty;
+                final hasRoutines = _getRoutinesForDay(day).isNotEmpty;
+                if (!hasTodos && !hasRoutines) return null;
+
+                final dots = <Widget>[];
+                if (hasRoutines) {
+                  dots.add(Container(
+                    width: 6, height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF22C55E),
+                      shape: BoxShape.circle,
+                    ),
+                  ));
+                }
+                if (hasTodos) {
+                  final todoCount = _getTodosForDay(day).length.clamp(1, 4);
+                  for (var i = 0; i < todoCount; i++) {
+                    dots.add(Container(
+                      width: 6, height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 0.5),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2D86FF),
+                        shape: BoxShape.circle,
+                      ),
+                    ));
+                  }
+                }
+                return Positioned(
+                  bottom: 1,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: dots,
+                  ),
+                );
+              },
+            ),
             calendarStyle: CalendarStyle(
               outsideDaysVisible: false,
               defaultTextStyle: const TextStyle(
@@ -638,13 +1211,7 @@ class _TodoPageState extends State<TodoPage> {
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
               ),
-              markerDecoration: const BoxDecoration(
-                color: Color(0xFF2D86FF),
-                shape: BoxShape.circle,
-              ),
-              markerSize: 6,
-              markersMaxCount: 4,
-              markerMargin: const EdgeInsets.symmetric(horizontal: 0.5),
+              markersMaxCount: 0,
             ),
             headerStyle: HeaderStyle(
               formatButtonVisible: false,
@@ -679,243 +1246,436 @@ class _TodoPageState extends State<TodoPage> {
 
           const SizedBox(height: 8),
 
-          // Selected day header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              children: [
-                Text(
-                  isToday
-                      ? '오늘의 할 일'
-                      : '${_selectedDay.month}월 ${_selectedDay.day}일의 할 일',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (todosForDay.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D86FF).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${todosForDay.where((t) => t['done'] == true).length}/${todosForDay.length}',
-                      style: const TextStyle(
-                        color: Color(0xFF2D86FF),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                const Spacer(),
-                IconButton(
-                  onPressed: _showAddDialog,
-                  icon: const Icon(
-                    Icons.add,
-                    color: Color(0xFF2D86FF),
-                    size: 25,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Todo list
+          // 루틴 + 할일 리스트
           Expanded(
-            child: todosForDay.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          size: 48,
-                          color: Colors.white.withOpacity(0.15),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '할 일이 없습니다',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ReorderableListView.builder(
+            child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: todosForDay.length,
-                    onReorder: _reorderTodo,
-                    proxyDecorator: (child, index, animation) {
-                      return Material(
-                        color: Colors.transparent,
-                        elevation: 6,
-                        shadowColor: Colors.black54,
-                        borderRadius: BorderRadius.circular(18),
-                        child: child,
-                      );
-                    },
-                    itemBuilder: (context, index) {
-                      final todo = todosForDay[index];
-                      final isDone = todo['done'] == true;
-                      final timeStr = todo['time'] as String?;
-                      final notifyBefore = todo['notifyBefore'] as int?;
-
-                      return Padding(
-                        key: ValueKey('$selectedKey-$index-${todo['title']}'),
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Dismissible(
-                          key: ValueKey('dismiss-$selectedKey-$index-${todo['title']}'),
-                          direction: DismissDirection.endToStart,
-                          onDismissed: (_) => _deleteTodo(index),
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                            ),
+                    children: [
+                      // ── 루틴 섹션 ──
+                      Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                          child: Row(
+                            children: [
+                              Text(
+                                isToday
+                                    ? '루틴'
+                                    : '${_selectedDay.month}월 ${_selectedDay.day}일의 루틴',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (routinesForDay.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2D86FF).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$routineDoneCount/${routinesForDay.length}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF2D86FF),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              const Spacer(),
+                              IconButton(
+                                onPressed: _showAddRoutineDialog,
+                                icon: const Icon(
+                                  Icons.add,
+                                  color: Color(0xFF2D86FF),
+                                  size: 25,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: GestureDetector(
-                            onTap: () => _toggleTodo(index),
+                        ),
+                        if (routinesForDay.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
                             child: Container(
-                            padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF121E2B),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.07),
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF121E2B),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.07),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _routines.isEmpty
+                                      ? '루틴을 추가해보세요'
+                                      : '이 날짜에 해당하는 루틴이 없습니다',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.3),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                    height: 26,
-                                    width: 26,
+                          )
+                        else
+                          ...List.generate(routinesForDay.length, (i) {
+                            final routine = routinesForDay[i];
+                            final isDone = _isRoutineCompletedForDay(routine, _selectedDay);
+                            final subtitle = _routineSubtitle(routine);
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Dismissible(
+                                key: ValueKey('routine-${routine['id']}'),
+                                direction: DismissDirection.endToStart,
+                                onDismissed: (_) => _deleteRoutine(i),
+                                background: Container(
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                child: GestureDetector(
+                                  onTap: () => _toggleRoutine(i),
+                                  child: Container(
+                                    padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
                                     decoration: BoxDecoration(
-                                      color: isDone
-                                          ? const Color(0xFF2D86FF)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: const Color(0xFF121E2B),
+                                      borderRadius: BorderRadius.circular(18),
                                       border: Border.all(
-                                        color: isDone
-                                            ? Colors.transparent
-                                            : Colors.white.withOpacity(0.18),
-                                        width: 1.6,
+                                        color: Colors.white.withOpacity(0.07),
                                       ),
                                     ),
-                                    child: isDone
-                                        ? const Icon(
-                                            Icons.check,
-                                            size: 18,
-                                            color: Colors.white,
-                                          )
-                                        : null,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        todo['title'] ?? '',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 16,
-                                          decoration: isDone
-                                              ? TextDecoration.lineThrough
-                                              : null,
+                                    child: Row(
+                                      children: [
+                                        // 반복 아이콘
+                                        Icon(
+                                          Icons.repeat_rounded,
+                                          size: 18,
                                           color: isDone
-                                              ? Colors.white.withOpacity(0.45)
-                                              : Colors.white,
+                                              ? Colors.white.withOpacity(0.3)
+                                              : const Color(0xFF2D86FF).withOpacity(0.7),
                                         ),
-                                      ),
-                                      if (timeStr != null) ...[
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.access_time_rounded,
-                                              size: 13,
+                                        const SizedBox(width: 8),
+                                        // 체크박스
+                                        Container(
+                                          height: 26,
+                                          width: 26,
+                                          decoration: BoxDecoration(
+                                            color: isDone
+                                                ? const Color(0xFF2D86FF)
+                                                : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
                                               color: isDone
-                                                  ? Colors.white.withOpacity(0.3)
-                                                  : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                  ? Colors.transparent
+                                                  : Colors.white.withOpacity(0.18),
+                                              width: 1.6,
                                             ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              timeStr,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                color: isDone
-                                                    ? Colors.white.withOpacity(0.3)
-                                                    : const Color(0xFF2D86FF).withOpacity(0.7),
-                                              ),
-                                            ),
-                                            if (notifyBefore != null) ...[
-                                              const SizedBox(width: 6),
-                                              Icon(
-                                                Icons.notifications_active_outlined,
-                                                size: 13,
-                                                color: isDone
-                                                    ? Colors.white.withOpacity(0.3)
-                                                    : Colors.white.withOpacity(0.4),
-                                              ),
-                                              const SizedBox(width: 2),
+                                          ),
+                                          child: isDone
+                                              ? const Icon(
+                                                  Icons.check,
+                                                  size: 18,
+                                                  color: Colors.white,
+                                                )
+                                              : null,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
                                               Text(
-                                                notifyBefore >= 60
-                                                    ? '${notifyBefore ~/ 60}시간 전'
-                                                    : '$notifyBefore분 전',
+                                                routine['title'] ?? '',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w500,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 16,
+                                                  decoration: isDone
+                                                      ? TextDecoration.lineThrough
+                                                      : null,
+                                                  color: isDone
+                                                      ? Colors.white.withOpacity(0.45)
+                                                      : Colors.white,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                subtitle,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
                                                   color: isDone
                                                       ? Colors.white.withOpacity(0.3)
-                                                      : Colors.white.withOpacity(0.4),
+                                                      : Colors.white.withOpacity(0.5),
                                                 ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _deleteRoutine(i),
+                                          icon: Icon(
+                                            Icons.close,
+                                            size: 18,
+                                            color: Colors.white.withOpacity(0.3),
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 32,
+                                            minHeight: 32,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        const SizedBox(height: 8),
+
+                      // ── 할일 섹션 ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        child: Row(
+                          children: [
+                            Text(
+                              isToday
+                                  ? '오늘의 할 일'
+                                  : '${_selectedDay.month}월 ${_selectedDay.day}일의 할 일',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (todosForDay.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2D86FF).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${todosForDay.where((t) => t['done'] == true).length}/${todosForDay.length}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF2D86FF),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: _showAddDialog,
+                              icon: const Icon(
+                                Icons.add,
+                                color: Color(0xFF2D86FF),
+                                size: 25,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      if (todosForDay.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF121E2B),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.07),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '할 일이 없습니다',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.3),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...List.generate(todosForDay.length, (index) {
+                          final todo = todosForDay[index];
+                          final isDone = todo['done'] == true;
+                          final timeStr = todo['time'] as String?;
+                          final notifyBefore = todo['notifyBefore'] as int?;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Dismissible(
+                              key: ValueKey('dismiss-$selectedKey-$index-${todo['title']}'),
+                              direction: DismissDirection.endToStart,
+                              onDismissed: (_) => _deleteTodo(index),
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
+                              ),
+                              child: GestureDetector(
+                                onTap: () => _toggleTodo(index),
+                                child: Container(
+                                  padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF121E2B),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.07),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        height: 26,
+                                        width: 26,
+                                        decoration: BoxDecoration(
+                                          color: isDone
+                                              ? const Color(0xFF2D86FF)
+                                              : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: isDone
+                                                ? Colors.transparent
+                                                : Colors.white.withOpacity(0.18),
+                                            width: 1.6,
+                                          ),
+                                        ),
+                                        child: isDone
+                                            ? const Icon(
+                                                Icons.check,
+                                                size: 18,
+                                                color: Colors.white,
+                                              )
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              todo['title'] ?? '',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                                decoration: isDone
+                                                    ? TextDecoration.lineThrough
+                                                    : null,
+                                                color: isDone
+                                                    ? Colors.white.withOpacity(0.45)
+                                                    : Colors.white,
+                                              ),
+                                            ),
+                                            if (timeStr != null) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.access_time_rounded,
+                                                    size: 13,
+                                                    color: isDone
+                                                        ? Colors.white.withOpacity(0.3)
+                                                        : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    timeStr,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isDone
+                                                          ? Colors.white.withOpacity(0.3)
+                                                          : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                    ),
+                                                  ),
+                                                  if (notifyBefore != null) ...[
+                                                    const SizedBox(width: 6),
+                                                    Icon(
+                                                      Icons.notifications_active_outlined,
+                                                      size: 13,
+                                                      color: isDone
+                                                          ? Colors.white.withOpacity(0.3)
+                                                          : Colors.white.withOpacity(0.4),
+                                                    ),
+                                                    const SizedBox(width: 2),
+                                                    Text(
+                                                      notifyBefore >= 60
+                                                          ? '${notifyBefore ~/ 60}시간 전'
+                                                          : '$notifyBefore분 전',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w500,
+                                                        color: isDone
+                                                            ? Colors.white.withOpacity(0.3)
+                                                            : Colors.white.withOpacity(0.4),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
                                               ),
                                             ],
                                           ],
                                         ),
-                                      ],
+                                      ),
+                                      IconButton(
+                                        onPressed: () => _deleteTodo(index),
+                                        icon: Icon(
+                                          Icons.close,
+                                          size: 18,
+                                          color: Colors.white.withOpacity(0.3),
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 32,
+                                          minHeight: 32,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  onPressed: () => _deleteTodo(index),
-                                  icon: Icon(
-                                    Icons.close,
-                                    size: 18,
-                                    color: Colors.white.withOpacity(0.3),
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 32,
-                                    minHeight: 32,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                          ),
-                        ),
-                      );
-                    },
+                          );
+                        }),
+
+                      const SizedBox(height: 20),
+                    ],
                   ),
           ),
         ],
