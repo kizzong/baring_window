@@ -1,10 +1,12 @@
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/notification_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -25,6 +27,11 @@ class _ProfilePageState extends State<ProfilePage> {
   bool ddayAlerts = true;
   bool progressAlerts = true;
   bool achievementPush = false;
+
+  bool morningTodoAlert = false;
+  bool eveningTodoAlert = false;
+  TimeOfDay morningTime = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay eveningTime = const TimeOfDay(hour: 21, minute: 0);
 
   int bottomIndex = 1;
   String? profileImagePath; // 프로필 이미지 경로 추가 ⭐
@@ -503,11 +510,129 @@ class _ProfilePageState extends State<ProfilePage> {
     final savedName = baringBox.get("userName", defaultValue: "바링");
     final savedImagePath = baringBox.get("profileImagePath");
 
+    final savedMorning = baringBox.get("morningTodoAlert", defaultValue: false);
+    final savedEvening = baringBox.get("eveningTodoAlert", defaultValue: false);
+    final savedMorningHour = baringBox.get("morningTimeHour", defaultValue: 8);
+    final savedMorningMinute = baringBox.get("morningTimeMinute", defaultValue: 0);
+    final savedEveningHour = baringBox.get("eveningTimeHour", defaultValue: 21);
+    final savedEveningMinute = baringBox.get("eveningTimeMinute", defaultValue: 0);
+
     setState(() {
       userName = savedName;
       _nameController.text = savedName;
       profileImagePath = savedImagePath;
+      morningTodoAlert = savedMorning;
+      eveningTodoAlert = savedEvening;
+      morningTime = TimeOfDay(hour: savedMorningHour, minute: savedMorningMinute);
+      eveningTime = TimeOfDay(hour: savedEveningHour, minute: savedEveningMinute);
     });
+  }
+
+  String _formatTime(TimeOfDay t) {
+    final period = t.hour < 12 ? '오전' : '오후';
+    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final m = t.minute.toString().padLeft(2, '0');
+    return '$period $h:$m';
+  }
+
+  Future<TimeOfDay?> _pickNotificationTime(TimeOfDay initial) async {
+    TimeOfDay selected = initial;
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF0B1623),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 상단 바
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // 헤더
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx, false),
+                      child: Text(
+                        '취소',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      '알림 시간 설정',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx, true),
+                      child: const Text(
+                        '완료',
+                        style: TextStyle(
+                          color: Color(0xFF2F80ED),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // CupertinoDatePicker
+              SizedBox(
+                height: 220,
+                child: CupertinoTheme(
+                  data: const CupertinoThemeData(
+                    brightness: Brightness.dark,
+                    textTheme: CupertinoTextThemeData(
+                      dateTimePickerTextStyle: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.time,
+                    use24hFormat: false,
+                    initialDateTime: DateTime(
+                      2000, 1, 1, initial.hour, initial.minute,
+                    ),
+                    onDateTimeChanged: (dt) {
+                      selected = TimeOfDay(hour: dt.hour, minute: dt.minute);
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(height: MediaQuery.of(ctx).padding.bottom + 16),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (confirmed == true) return selected;
+    return null;
   }
 
   @override
@@ -776,6 +901,119 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 const SizedBox(height: 22),
 
+                // ---------- SECTION: TODO DAILY NOTIFICATIONS ----------
+                Text(
+                  '할일 알림',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.60),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                _CardBox(
+                  child: Column(
+                    children: [
+                      // ── 아침 할일 알림 ──
+                      _SwitchRow(
+                        title: '아침 할일 알림',
+                        desc: '매일 ${_formatTime(morningTime)}에 오늘의 할 일을 알려줘요.',
+                        value: morningTodoAlert,
+                        onChanged: (v) async {
+                          if (v) {
+                            final picked = await _pickNotificationTime(morningTime);
+                            if (picked == null) return;
+                            setState(() {
+                              morningTodoAlert = true;
+                              morningTime = picked;
+                            });
+                            baringBox.put("morningTodoAlert", true);
+                            baringBox.put("morningTimeHour", picked.hour);
+                            baringBox.put("morningTimeMinute", picked.minute);
+                            NotificationService
+                                .scheduleDailyMorningNotification(picked.hour, picked.minute);
+                          } else {
+                            setState(() => morningTodoAlert = false);
+                            baringBox.put("morningTodoAlert", false);
+                            NotificationService.cancelMorningNotification();
+                          }
+                        },
+                        primary: primary,
+                        subtle: subtle,
+                        line: line,
+                      ),
+                      // 시간 변경 버튼 (ON 상태일 때만)
+                      if (morningTodoAlert) ...[
+                        const SizedBox(height: 6),
+                        _TimeChip(
+                          time: _formatTime(morningTime),
+                          primary: primary,
+                          onTap: () async {
+                            final picked = await _pickNotificationTime(morningTime);
+                            if (picked == null) return;
+                            setState(() => morningTime = picked);
+                            baringBox.put("morningTimeHour", picked.hour);
+                            baringBox.put("morningTimeMinute", picked.minute);
+                            NotificationService
+                                .scheduleDailyMorningNotification(picked.hour, picked.minute);
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      // ── 저녁 할일 알림 ──
+                      _SwitchRow(
+                        title: '저녁 할일 알림',
+                        desc: '매일 ${_formatTime(eveningTime)}에 내일의 할 일을 알려줘요.',
+                        value: eveningTodoAlert,
+                        onChanged: (v) async {
+                          if (v) {
+                            final picked = await _pickNotificationTime(eveningTime);
+                            if (picked == null) return;
+                            setState(() {
+                              eveningTodoAlert = true;
+                              eveningTime = picked;
+                            });
+                            baringBox.put("eveningTodoAlert", true);
+                            baringBox.put("eveningTimeHour", picked.hour);
+                            baringBox.put("eveningTimeMinute", picked.minute);
+                            NotificationService
+                                .scheduleDailyEveningNotification(picked.hour, picked.minute);
+                          } else {
+                            setState(() => eveningTodoAlert = false);
+                            baringBox.put("eveningTodoAlert", false);
+                            NotificationService.cancelEveningNotification();
+                          }
+                        },
+                        primary: primary,
+                        subtle: subtle,
+                        line: line,
+                      ),
+                      // 시간 변경 버튼 (ON 상태일 때만)
+                      if (eveningTodoAlert) ...[
+                        const SizedBox(height: 6),
+                        _TimeChip(
+                          time: _formatTime(eveningTime),
+                          primary: primary,
+                          onTap: () async {
+                            final picked = await _pickNotificationTime(eveningTime);
+                            if (picked == null) return;
+                            setState(() => eveningTime = picked);
+                            baringBox.put("eveningTimeHour", picked.hour);
+                            baringBox.put("eveningTimeMinute", picked.minute);
+                            NotificationService
+                                .scheduleDailyEveningNotification(picked.hour, picked.minute);
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+
                 // ---------- SECTION: NOTIFICATION PREFERENCES ----------
                 Row(
                   children: [
@@ -853,6 +1091,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 22),
 
                 Text(
@@ -1094,6 +1333,54 @@ class _SwitchRow extends StatelessWidget {
             inactiveTrackColor: Colors.white.withValues(alpha: 0.20),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TimeChip extends StatelessWidget {
+  final String time;
+  final Color primary;
+  final VoidCallback onTap;
+
+  const _TimeChip({
+    required this.time,
+    required this.primary,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: primary.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.access_time_rounded, color: primary, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              time,
+              style: TextStyle(
+                color: primary,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.edit_rounded,
+              color: primary.withValues(alpha: 0.6),
+              size: 14,
+            ),
+          ],
+        ),
       ),
     );
   }

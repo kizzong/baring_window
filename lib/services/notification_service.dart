@@ -91,4 +91,94 @@ class NotificationService {
     await _plugin.cancel(id);
   }
 
+  // ── 매일 반복 알림 (할일 알림) ──
+
+  static const int _morningNotifId = 999901;
+  static const int _eveningNotifId = 999902;
+
+  /// 당일 할일 알림 예약 (사용자 지정 시간)
+  static Future<void> scheduleDailyMorningNotification(int hour, int minute) async {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      'daily_todo_reminder',
+      '할 일 일일 알림',
+      channelDescription: '아침/저녁 할 일 알림',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _plugin.zonedSchedule(
+      _morningNotifId,
+      '오늘의 할 일',
+      '오늘 할 일을 확인해보세요!',
+      scheduled,
+      details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  /// 다음날 할일 알림 예약 (사용자 지정 시간)
+  static Future<void> scheduleDailyEveningNotification(int hour, int minute) async {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      'daily_todo_reminder',
+      '할 일 일일 알림',
+      channelDescription: '아침/저녁 할 일 알림',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _plugin.zonedSchedule(
+      _eveningNotifId,
+      '내일의 할 일',
+      '내일 할 일을 미리 확인해보세요!',
+      scheduled,
+      details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  /// 아침 알림 취소
+  static Future<void> cancelMorningNotification() async {
+    await _plugin.cancel(_morningNotifId);
+  }
+
+  /// 저녁 알림 취소
+  static Future<void> cancelEveningNotification() async {
+    await _plugin.cancel(_eveningNotifId);
+  }
 }
