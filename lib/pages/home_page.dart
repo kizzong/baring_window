@@ -345,7 +345,21 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 32),
 
-              // 오늘의 루틴
+              // 날짜 헤더
+              Row(
+                children: [
+                  Text(
+                    DateFormat('M월 d일 (E)', 'ko').format(DateTime.now()),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // 루틴
               Builder(
                 builder: (context) {
                   final todayRoutines = _getTodayRoutines();
@@ -359,22 +373,23 @@ class _HomePageState extends State<HomePage> {
                           const Icon(
                             Icons.repeat_rounded,
                             color: Colors.white,
-                            size: 22,
+                            size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           const Text(
-                            "오늘의 루틴",
+                            "루틴",
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 17,
                               fontWeight: FontWeight.w800,
+                              color: Colors.white,
                             ),
                           ),
                           if (todayRoutines.isNotEmpty) ...[
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 7,
+                                horizontal: 10,
+                                vertical: 5,
                               ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF0F2538),
@@ -388,6 +403,7 @@ class _HomePageState extends State<HomePage> {
                                 style: const TextStyle(
                                   color: Color(0xFF2D86FF),
                                   fontWeight: FontWeight.w800,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -395,7 +411,7 @@ class _HomePageState extends State<HomePage> {
                           const Spacer(),
                         ],
                       ),
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 12),
                       if (todayRoutines.isEmpty)
                         Container(
                           width: double.infinity,
@@ -409,7 +425,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           child: Center(
                             child: Text(
-                              '오늘의 루틴이 없습니다',
+                              '루틴이 없습니다',
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.3),
                                 fontSize: 15,
@@ -515,9 +531,9 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
-              // 오늘의 할 일
+              // 할 일
               Builder(
                 builder: (context) {
                   final todayTodos = _getTodayTodos();
@@ -528,25 +544,26 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.task_alt_rounded,
                             color: Colors.white,
-                            size: 22,
+                            size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           const Text(
-                            "오늘의 할 일",
+                            "할 일",
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 17,
                               fontWeight: FontWeight.w800,
+                              color: Colors.white,
                             ),
                           ),
                           if (todayTodos.isNotEmpty) ...[
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 7,
+                                horizontal: 10,
+                                vertical: 5,
                               ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF0F2538),
@@ -560,6 +577,7 @@ class _HomePageState extends State<HomePage> {
                                 style: const TextStyle(
                                   color: Color(0xFF2D86FF),
                                   fontWeight: FontWeight.w800,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -567,7 +585,7 @@ class _HomePageState extends State<HomePage> {
                           const Spacer(),
                         ],
                       ),
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 12),
                       if (todayTodos.isEmpty)
                         Container(
                           width: double.infinity,
@@ -581,7 +599,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           child: Center(
                             child: Text(
-                              '오늘의 할 일이 없습니다',
+                              '할 일이 없습니다',
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.3),
                                 fontSize: 15,

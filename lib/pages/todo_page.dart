@@ -85,6 +85,30 @@ class _TodoPageState extends State<TodoPage> {
     }
   }
 
+  void _editTodo(int index, String title, {String? time, int? notifyBefore}) {
+    final key = _dayKey(_selectedDay);
+    if (_todos[key] == null || index >= _todos[key]!.length) return;
+
+    // 기존 알림 취소
+    final old = _todos[key]![index];
+    if (old['time'] != null && old['notifyBefore'] != null) {
+      _cancelNotificationForTodo(key, index);
+    }
+
+    // 데이터 업데이트
+    _todos[key]![index]['title'] = title;
+    _todos[key]![index]['time'] = time;
+    _todos[key]![index]['notifyBefore'] = notifyBefore;
+
+    _saveTodos();
+    setState(() {});
+
+    // 새 알림 스케줄
+    if (time != null && notifyBefore != null) {
+      _scheduleNotificationForTodo(key, index, _todos[key]![index]);
+    }
+  }
+
   void _scheduleNotificationForTodo(
       String key, int index, Map<String, dynamic> todo) {
     final time = todo['time'] as String?;
@@ -329,6 +353,45 @@ class _TodoPageState extends State<TodoPage> {
     // 알림 스케줄
     if (time != null && notifyBefore != null) {
       _scheduleRoutineNotification(routine);
+    }
+  }
+
+  void _editRoutine(int routineIndex, String title, {
+    required String type,
+    List<int>? days,
+    String? time,
+    int? notifyBefore,
+  }) {
+    final routinesForDay = _getRoutinesForDay(_selectedDay);
+    if (routineIndex >= routinesForDay.length) return;
+
+    final routine = routinesForDay[routineIndex];
+    final globalIndex = _routines.indexWhere((r) => r['id'] == routine['id']);
+    if (globalIndex == -1) return;
+
+    // 기존 알림 취소
+    if (_routines[globalIndex]['time'] != null &&
+        _routines[globalIndex]['notifyBefore'] != null) {
+      _cancelRoutineNotification(_routines[globalIndex]);
+    }
+
+    // 데이터 업데이트
+    _routines[globalIndex]['title'] = title;
+    _routines[globalIndex]['type'] = type;
+    if (type == 'weekly' && days != null) {
+      _routines[globalIndex]['days'] = days;
+    } else {
+      _routines[globalIndex].remove('days');
+    }
+    _routines[globalIndex]['time'] = time;
+    _routines[globalIndex]['notifyBefore'] = notifyBefore;
+
+    _saveRoutines();
+    setState(() {});
+
+    // 새 알림 스케줄
+    if (time != null && notifyBefore != null) {
+      _scheduleRoutineNotification(_routines[globalIndex]);
     }
   }
 
@@ -867,6 +930,432 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
+  void _showEditTodoDialog(int index) {
+    final key = _dayKey(_selectedDay);
+    if (_todos[key] == null || index >= _todos[key]!.length) return;
+    final todo = _todos[key]![index];
+
+    final controller = TextEditingController(text: todo['title'] ?? '');
+    final focusNode = FocusNode();
+    TimeOfDay? selectedTime;
+    if (todo['time'] != null) {
+      final parts = (todo['time'] as String).split(':');
+      selectedTime = TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    }
+    int? selectedNotifyBefore = todo['notifyBefore'] as int?;
+
+    const notifyOptions = [
+      {'label': '없음', 'value': null},
+      {'label': '5분 전', 'value': 5},
+      {'label': '10분 전', 'value': 10},
+      {'label': '15분 전', 'value': 15},
+      {'label': '30분 전', 'value': 30},
+      {'label': '1시간 전', 'value': 60},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          focusNode.requestFocus();
+        });
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            void submit() {
+              if (controller.text.trim().isNotEmpty) {
+                String? timeStr;
+                if (selectedTime != null) {
+                  timeStr =
+                      '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+                }
+                _editTodo(
+                  index,
+                  controller.text.trim(),
+                  time: timeStr,
+                  notifyBefore: selectedTime != null ? selectedNotifyBefore : null,
+                );
+                Navigator.pop(ctx);
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1A2332),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                '할 일 수정',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      autofocus: true,
+                      maxLength: 20,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: '할 일을 입력하세요',
+                        hintStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                        counterStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Colors.white.withOpacity(0.15)),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF2D86FF)),
+                        ),
+                      ),
+                      onSubmitted: (_) => submit(),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTimePickerButton(
+                      selectedTime: selectedTime,
+                      onTimeSelected: (time) {
+                        setDialogState(() => selectedTime = time);
+                      },
+                      onTimeClear: () {
+                        setDialogState(() {
+                          selectedTime = null;
+                          selectedNotifyBefore = null;
+                        });
+                      },
+                    ),
+                    if (selectedTime != null) ...[
+                      const SizedBox(height: 12),
+                      _buildNotifyOptions(
+                        notifyOptions: notifyOptions,
+                        selectedNotifyBefore: selectedNotifyBefore,
+                        onSelected: (value) {
+                          setDialogState(() => selectedNotifyBefore = value);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    '취소',
+                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: submit,
+                  child: const Text(
+                    '수정',
+                    style: TextStyle(
+                      color: Color(0xFF2D86FF),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditRoutineDialog(int routineIndex) {
+    final routinesForDay = _getRoutinesForDay(_selectedDay);
+    if (routineIndex >= routinesForDay.length) return;
+    final routine = routinesForDay[routineIndex];
+
+    final controller = TextEditingController(text: routine['title'] ?? '');
+    final focusNode = FocusNode();
+    String routineType = routine['type'] as String? ?? 'daily';
+    List<int> selectedDays = List<int>.from(routine['days'] ?? []);
+    TimeOfDay? selectedTime;
+    if (routine['time'] != null) {
+      final parts = (routine['time'] as String).split(':');
+      selectedTime = TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    }
+    int? selectedNotifyBefore = routine['notifyBefore'] as int?;
+
+    const notifyOptions = [
+      {'label': '없음', 'value': null},
+      {'label': '5분 전', 'value': 5},
+      {'label': '10분 전', 'value': 10},
+      {'label': '15분 전', 'value': 15},
+      {'label': '30분 전', 'value': 30},
+      {'label': '1시간 전', 'value': 60},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          focusNode.requestFocus();
+        });
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            void submit() {
+              final title = controller.text.trim();
+              if (title.isEmpty) return;
+              if (routineType == 'weekly' && selectedDays.isEmpty) return;
+
+              String? timeStr;
+              if (selectedTime != null) {
+                timeStr =
+                    '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+              }
+              _editRoutine(
+                routineIndex,
+                title,
+                type: routineType,
+                days: routineType == 'weekly' ? (List<int>.from(selectedDays)..sort()) : null,
+                time: timeStr,
+                notifyBefore: selectedTime != null ? selectedNotifyBefore : null,
+              );
+              Navigator.pop(ctx);
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1A2332),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                '루틴 수정',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      autofocus: true,
+                      maxLength: 20,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: '루틴 이름을 입력하세요',
+                        hintStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                        counterStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Colors.white.withOpacity(0.15)),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF2D86FF)),
+                        ),
+                      ),
+                      onSubmitted: (_) => submit(),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '반복',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                routineType = 'daily';
+                                selectedDays = [];
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: routineType == 'daily'
+                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
+                                    : Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: routineType == 'daily'
+                                      ? const Color(0xFF2D86FF)
+                                      : Colors.white.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '매일',
+                                  style: TextStyle(
+                                    color: routineType == 'daily'
+                                        ? const Color(0xFF2D86FF)
+                                        : Colors.white.withOpacity(0.6),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setDialogState(() => routineType = 'weekly');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: routineType == 'weekly'
+                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
+                                    : Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: routineType == 'weekly'
+                                      ? const Color(0xFF2D86FF)
+                                      : Colors.white.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '특정 요일',
+                                  style: TextStyle(
+                                    color: routineType == 'weekly'
+                                        ? const Color(0xFF2D86FF)
+                                        : Colors.white.withOpacity(0.6),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (routineType == 'weekly') ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: List.generate(7, (i) {
+                          final day = i + 1;
+                          final isSelected = selectedDays.contains(day);
+                          return GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                if (isSelected) {
+                                  selectedDays.remove(day);
+                                } else {
+                                  selectedDays.add(day);
+                                }
+                              });
+                            },
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF2D86FF)
+                                    : Colors.white.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.transparent
+                                      : Colors.white.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _dayNames[i],
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white.withOpacity(0.5),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    _buildTimePickerButton(
+                      selectedTime: selectedTime,
+                      onTimeSelected: (time) {
+                        setDialogState(() => selectedTime = time);
+                      },
+                      onTimeClear: () {
+                        setDialogState(() {
+                          selectedTime = null;
+                          selectedNotifyBefore = null;
+                        });
+                      },
+                    ),
+                    if (selectedTime != null) ...[
+                      const SizedBox(height: 12),
+                      _buildNotifyOptions(
+                        notifyOptions: notifyOptions,
+                        selectedNotifyBefore: selectedNotifyBefore,
+                        onSelected: (value) {
+                          setDialogState(() => selectedNotifyBefore = value);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    '취소',
+                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: submit,
+                  child: const Text(
+                    '수정',
+                    style: TextStyle(
+                      color: Color(0xFF2D86FF),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   // ── 공통 위젯 빌더 ──
 
   Widget _buildTimePickerButton({
@@ -1101,7 +1590,6 @@ class _TodoPageState extends State<TodoPage> {
     final todosForDay = _getTodosForDay(_selectedDay);
     final routinesForDay = _getRoutinesForDay(_selectedDay);
     final selectedKey = _dayKey(_selectedDay);
-    final isToday = isSameDay(_selectedDay, DateTime.now());
 
     final routineDoneCount = routinesForDay
         .where((r) => _isRoutineCompletedForDay(r, _selectedDay))
@@ -1117,6 +1605,41 @@ class _TodoPageState extends State<TodoPage> {
           '할 일 관리',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
+        actions: [
+          GestureDetector(
+            onTap: _showAddRoutineDialog,
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2D86FF).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF2D86FF).withOpacity(0.3),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.repeat_rounded,
+                    color: Color(0xFF2D86FF),
+                    size: 16,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    '루틴 추가',
+                    style: TextStyle(
+                      color: Color(0xFF2D86FF),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -1251,106 +1774,74 @@ class _TodoPageState extends State<TodoPage> {
             child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
-                      // ── 루틴 섹션 ──
+                      // ── 날짜 헤더 ──
                       Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        child: Row(
+                          children: [
+                            Text(
+                              DateFormat('M월 d일 (E)', 'ko').format(_selectedDay),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ── 루틴 섹션 ──
+                      if (routinesForDay.isNotEmpty) ...[
+                        Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                           child: Row(
                             children: [
-                              Text(
-                                isToday
-                                    ? '루틴'
-                                    : '${_selectedDay.month}월 ${_selectedDay.day}일의 루틴',
-                                style: const TextStyle(
-                                  fontSize: 18,
+                              const Icon(
+                                Icons.repeat_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '루틴',
+                                style: TextStyle(
+                                  fontSize: 17,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              if (routinesForDay.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF2D86FF).withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    '$routineDoneCount/${routinesForDay.length}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF2D86FF),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
                                 ),
-                              const Spacer(),
-                              IconButton(
-                                onPressed: _showAddRoutineDialog,
-                                icon: const Icon(
-                                  Icons.add,
-                                  color: Color(0xFF2D86FF),
-                                  size: 25,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2D86FF).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$routineDoneCount/${routinesForDay.length}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF2D86FF),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        if (routinesForDay.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF121E2B),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.07),
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  _routines.isEmpty
-                                      ? '루틴을 추가해보세요'
-                                      : '이 날짜에 해당하는 루틴이 없습니다',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.3),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          ...List.generate(routinesForDay.length, (i) {
+                        ...List.generate(routinesForDay.length, (i) {
                             final routine = routinesForDay[i];
                             final isDone = _isRoutineCompletedForDay(routine, _selectedDay);
                             final subtitle = _routineSubtitle(routine);
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 10),
-                              child: Dismissible(
-                                key: ValueKey('routine-${routine['id']}'),
-                                direction: DismissDirection.endToStart,
-                                onDismissed: (_) => _deleteRoutine(i),
-                                background: Container(
-                                  alignment: Alignment.centerRight,
-                                  padding: const EdgeInsets.only(right: 20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                                child: GestureDetector(
-                                  onTap: () => _toggleRoutine(i),
+                              child: GestureDetector(
+                                  onTap: () => _showEditRoutineDialog(i),
                                   child: Container(
                                     padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
                                     decoration: BoxDecoration(
@@ -1362,38 +1853,46 @@ class _TodoPageState extends State<TodoPage> {
                                     ),
                                     child: Row(
                                       children: [
-                                        // 반복 아이콘
-                                        Icon(
-                                          Icons.repeat_rounded,
-                                          size: 18,
-                                          color: isDone
-                                              ? Colors.white.withOpacity(0.3)
-                                              : const Color(0xFF2D86FF).withOpacity(0.7),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        // 체크박스
-                                        Container(
-                                          height: 26,
-                                          width: 26,
-                                          decoration: BoxDecoration(
-                                            color: isDone
-                                                ? const Color(0xFF2D86FF)
-                                                : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: isDone
-                                                  ? Colors.transparent
-                                                  : Colors.white.withOpacity(0.18),
-                                              width: 1.6,
-                                            ),
+                                        // 반복 아이콘 + 체크박스
+                                        GestureDetector(
+                                          onTap: () => _toggleRoutine(i),
+                                          behavior: HitTestBehavior.opaque,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.repeat_rounded,
+                                                size: 18,
+                                                color: isDone
+                                                    ? Colors.white.withOpacity(0.3)
+                                                    : const Color(0xFF2D86FF).withOpacity(0.7),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                height: 26,
+                                                width: 26,
+                                                decoration: BoxDecoration(
+                                                  color: isDone
+                                                      ? const Color(0xFF2D86FF)
+                                                      : Colors.transparent,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: isDone
+                                                        ? Colors.transparent
+                                                        : Colors.white.withOpacity(0.18),
+                                                    width: 1.6,
+                                                  ),
+                                                ),
+                                                child: isDone
+                                                    ? const Icon(
+                                                        Icons.check,
+                                                        size: 18,
+                                                        color: Colors.white,
+                                                      )
+                                                    : null,
+                                              ),
+                                            ],
                                           ),
-                                          child: isDone
-                                              ? const Icon(
-                                                  Icons.check,
-                                                  size: 18,
-                                                  color: Colors.white,
-                                                )
-                                              : null,
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -1445,23 +1944,27 @@ class _TodoPageState extends State<TodoPage> {
                                       ],
                                     ),
                                   ),
-                                ),
                               ),
                             );
                           }),
                         const SizedBox(height: 8),
+                      ],
 
                       // ── 할일 섹션 ──
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                         child: Row(
                           children: [
-                            Text(
-                              isToday
-                                  ? '오늘의 할 일'
-                                  : '${_selectedDay.month}월 ${_selectedDay.day}일의 할 일',
-                              style: const TextStyle(
-                                fontSize: 18,
+                            const Icon(
+                              Icons.task_alt_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              '할 일',
+                              style: TextStyle(
+                                fontSize: 17,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                               ),
@@ -1530,24 +2033,8 @@ class _TodoPageState extends State<TodoPage> {
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 10),
-                            child: Dismissible(
-                              key: ValueKey('dismiss-$selectedKey-$index-${todo['title']}'),
-                              direction: DismissDirection.endToStart,
-                              onDismissed: (_) => _deleteTodo(index),
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 20),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
-                                ),
-                              ),
-                              child: GestureDetector(
-                                onTap: () => _toggleTodo(index),
+                            child: GestureDetector(
+                                onTap: () => _showEditTodoDialog(index),
                                 child: Container(
                                   padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
                                   decoration: BoxDecoration(
@@ -1559,28 +2046,32 @@ class _TodoPageState extends State<TodoPage> {
                                   ),
                                   child: Row(
                                     children: [
-                                      Container(
-                                        height: 26,
-                                        width: 26,
-                                        decoration: BoxDecoration(
-                                          color: isDone
-                                              ? const Color(0xFF2D86FF)
-                                              : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(
+                                      GestureDetector(
+                                        onTap: () => _toggleTodo(index),
+                                        behavior: HitTestBehavior.opaque,
+                                        child: Container(
+                                          height: 26,
+                                          width: 26,
+                                          decoration: BoxDecoration(
                                             color: isDone
-                                                ? Colors.transparent
-                                                : Colors.white.withOpacity(0.18),
-                                            width: 1.6,
+                                                ? const Color(0xFF2D86FF)
+                                                : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: isDone
+                                                  ? Colors.transparent
+                                                  : Colors.white.withOpacity(0.18),
+                                              width: 1.6,
+                                            ),
                                           ),
+                                          child: isDone
+                                              ? const Icon(
+                                                  Icons.check,
+                                                  size: 18,
+                                                  color: Colors.white,
+                                                )
+                                              : null,
                                         ),
-                                        child: isDone
-                                            ? const Icon(
-                                                Icons.check,
-                                                size: 18,
-                                                color: Colors.white,
-                                              )
-                                            : null,
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -1669,7 +2160,6 @@ class _TodoPageState extends State<TodoPage> {
                                     ],
                                   ),
                                 ),
-                              ),
                             ),
                           );
                         }),

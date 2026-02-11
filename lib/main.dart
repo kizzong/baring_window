@@ -39,65 +39,26 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // int _selectedIndex = 0;
-  // final List<Widget> _pages = [
-  //   const HomePage(),
-  //   // const DDaySettingsPage(),
-  //   const ProfilePage(),
-  // ];
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const InitialScreen(),
-    );
-  }
-}
-
-// 앱 시작 시 온보딩 완료 여부를 확인하는 화면
-class InitialScreen extends StatefulWidget {
-  const InitialScreen({super.key});
-
-  @override
-  State<InitialScreen> createState() => _InitialScreenState();
-}
-
-class _InitialScreenState extends State<InitialScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _checkOnboardingStatus();
-  }
-
-  void _checkOnboardingStatus() {
-    // Hive는 동기적으로 읽을 수 있습니다
     final hasSeenOnboarding = OnboardingService.hasSeenOnboarding();
 
-    // 약간의 딜레이 후 화면 전환
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-
-      if (hasSeenOnboarding) {
-        // 온보딩을 이미 본 경우 -> 메인 화면으로
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainAppScreen()),
-        );
-      } else {
-        // 온보딩을 처음 보는 경우 -> 온보딩 화면으로
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const OnboardingPage()),
-        );
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // 로딩 화면 (온보딩 확인 중)
-    return const Scaffold(
-      backgroundColor: Color(0xFF0B1623),
-      body: Center(child: CircularProgressIndicator(color: Color(0xFF3E7BFF))),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        fontFamily: null,
+        scaffoldBackgroundColor: Color(0xFF0B1623),
+      ),
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [const Locale('ko', 'KR')],
+      home: hasSeenOnboarding
+          ? const MainAppScreen()
+          : const OnboardingPage(),
     );
   }
 }
@@ -128,52 +89,36 @@ class _MainAppScreenState extends State<MainAppScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        fontFamily: null,
-        scaffoldBackgroundColor: Color(0xFF0B1623),
+    return Scaffold(
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        children: _pages,
       ),
 
-      localizationsDelegates: [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: [const Locale('ko', 'KR')],
-      debugShowCheckedModeBanner: false,
-
-      home: Scaffold(
-        body: PageView(
-          controller: _pageController,
-          onPageChanged: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          children: _pages,
-        ),
-
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: Color(0xFF0B1623),
-          selectedItemColor: Colors.white,
-          currentIndex: _selectedIndex,
-          items: [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month),
-              label: "",
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
-          ],
-          onTap: (index) {
-            _pageController.animateToPage(
-              index,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-          },
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Color(0xFF0B1623),
+        selectedItemColor: Colors.white,
+        currentIndex: _selectedIndex,
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month),
+            label: "",
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
+        ],
+        onTap: (index) {
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        },
       ),
     );
   }

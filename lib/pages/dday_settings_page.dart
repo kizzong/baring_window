@@ -168,8 +168,11 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
               });
 
               // 위젯 업데이트 ⭐
-              await WidgetService.updateWidget();
+              try {
+                await WidgetService.updateWidget();
+              } catch (_) {}
 
+              if (!context.mounted) return;
               Navigator.pop(context);
             },
             child: Text(
