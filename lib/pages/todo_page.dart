@@ -592,7 +592,7 @@ class _TodoPageState extends State<TodoPage> {
                           borderSide: BorderSide(color: Color(0xFF2D86FF)),
                         ),
                       ),
-                      onSubmitted: (_) => submit(),
+                      onEditingComplete: () => focusNode.unfocus(),
                     ),
                     const SizedBox(height: 16),
 
@@ -735,7 +735,7 @@ class _TodoPageState extends State<TodoPage> {
                           borderSide: BorderSide(color: Color(0xFF2D86FF)),
                         ),
                       ),
-                      onSubmitted: (_) => submit(),
+                      onEditingComplete: () => focusNode.unfocus(),
                     ),
                     const SizedBox(height: 16),
 
@@ -1020,7 +1020,7 @@ class _TodoPageState extends State<TodoPage> {
                           borderSide: BorderSide(color: Color(0xFF2D86FF)),
                         ),
                       ),
-                      onSubmitted: (_) => submit(),
+                      onEditingComplete: () => focusNode.unfocus(),
                     ),
                     const SizedBox(height: 16),
                     _buildTimePickerButton(
@@ -1170,7 +1170,7 @@ class _TodoPageState extends State<TodoPage> {
                           borderSide: BorderSide(color: Color(0xFF2D86FF)),
                         ),
                       ),
-                      onSubmitted: (_) => submit(),
+                      onEditingComplete: () => focusNode.unfocus(),
                     ),
                     const SizedBox(height: 16),
                     Text(
