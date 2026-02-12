@@ -20,7 +20,8 @@ void main() async {
   await Hive.openBox('baring');
 
   // 위젯 초기화 ⭐
-  await WidgetService.updateWidget(); // ⭐ 주석 해제
+  await WidgetService.updateWidget(); // D-Day 위젯
+  await WidgetService.syncWidget(); // 할 일 위젯
 
   // 알림 초기화
   await NotificationService.init();

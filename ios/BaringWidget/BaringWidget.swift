@@ -319,7 +319,7 @@ struct BaringWidget_Previews: PreviewProvider {
             ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
             .previewDisplayName("기본 하늘")
-            
+
             BaringWidgetEntryView(entry: SimpleEntry(
                 date: Date(),
                 title: "전기기사 자격증 취득",
@@ -332,6 +332,175 @@ struct BaringWidget_Previews: PreviewProvider {
             ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
             .previewDisplayName("빨강")
+        }
+    }
+}
+
+// MARK: - 할 일 위젯
+
+struct WidgetItem: Identifiable {
+    let id: Int
+    let type: String   // "todo" or "routine"
+    let title: String
+}
+
+struct TodoProvider: TimelineProvider {
+    func placeholder(in context: Context) -> TodoEntry {
+        TodoEntry(date: Date(), items: [
+            WidgetItem(id: 0, type: "todo", title: "할 일 1"),
+            WidgetItem(id: 1, type: "routine", title: "루틴 1"),
+        ], count: 2, total: 3)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (TodoEntry) -> ()) {
+        let entry = TodoEntry(date: Date(), items: [
+            WidgetItem(id: 0, type: "todo", title: "할 일 1"),
+            WidgetItem(id: 1, type: "routine", title: "루틴 1"),
+        ], count: 2, total: 3)
+        completion(entry)
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+        let sharedDefaults = UserDefaults(suiteName: "group.baringWidget")
+        let jsonStr = sharedDefaults?.string(forKey: "widget_items_json") ?? "[]"
+        let count = sharedDefaults?.integer(forKey: "widget_items_count") ?? 0
+        let total = sharedDefaults?.integer(forKey: "widget_items_total") ?? 0
+
+        var items: [WidgetItem] = []
+        if let data = jsonStr.data(using: .utf8),
+           let array = try? JSONSerialization.jsonObject(with: data) as? [[String: String]] {
+            for (index, dict) in array.enumerated() {
+                let type = dict["type"] ?? "todo"
+                let title = dict["title"] ?? ""
+                items.append(WidgetItem(id: index, type: type, title: title))
+            }
+        }
+
+        let entry = TodoEntry(date: Date(), items: items, count: count, total: total)
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
+        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+        completion(timeline)
+    }
+}
+
+struct TodoEntry: TimelineEntry {
+    let date: Date
+    let items: [WidgetItem]
+    let count: Int
+    let total: Int
+}
+
+struct TodoWidgetEntryView: View {
+    var entry: TodoProvider.Entry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // 상단: 할 일 뱃지 + 개수
+            HStack {
+                Text("할 일")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.18))
+                    .cornerRadius(8)
+
+                Spacer()
+
+                if entry.total > 0 {
+                    Text("\(entry.count)/\(entry.total)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.5))
+                }
+            }
+
+            Spacer().frame(height: 8)
+
+            if entry.items.isEmpty {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Text("할 일을 모두\n완료했어요!")
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.5))
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                }
+                Spacer()
+            } else {
+                let maxItems = 7
+                let hasMore = entry.items.count > maxItems
+                let visibleItems = hasMore ? Array(entry.items.prefix(maxItems - 1)) : Array(entry.items.prefix(maxItems))
+
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(visibleItems) { item in
+                        HStack(spacing: 6) {
+                            Image(systemName: item.type == "routine" ? "arrow.trianglehead.2.clockwise" : "square")
+                                .font(.system(size: 10))
+                                .foregroundColor(item.type == "routine" ? Color(hex: "34D399") : .white.opacity(0.5))
+                            Text(item.title)
+                                .font(.system(size: 13))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+                    if hasMore {
+                        Text("... 외 \(entry.items.count - visibleItems.count)개")
+                            .font(.system(size: 13))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .widgetURL(URL(string: "baringapp://open"))
+    }
+}
+
+struct TodoWidget: Widget {
+    let kind: String = "TodoWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: TodoProvider()) { entry in
+            TodoWidgetEntryView(entry: entry)
+                .containerBackground(for: .widget) {
+                    Color(hex: "1A2332")
+                }
+        }
+        .configurationDisplayName("Baring 할 일")
+        .description("오늘의 할 일과 루틴을 확인하세요")
+        .supportedFamilies([.systemSmall])
+        .contentMarginsDisabled()
+    }
+}
+
+struct TodoWidget_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            TodoWidgetEntryView(entry: TodoEntry(
+                date: Date(),
+                items: [
+                    WidgetItem(id: 0, type: "todo", title: "공부하기"),
+                    WidgetItem(id: 1, type: "routine", title: "운동"),
+                    WidgetItem(id: 2, type: "todo", title: "책 읽기"),
+                ],
+                count: 3,
+                total: 5
+            ))
+            .previewContext(WidgetPreviewContext(family: .systemSmall))
+            .previewDisplayName("할 일 + 루틴")
+
+            TodoWidgetEntryView(entry: TodoEntry(
+                date: Date(),
+                items: [],
+                count: 0,
+                total: 0
+            ))
+            .previewContext(WidgetPreviewContext(family: .systemSmall))
+            .previewDisplayName("빈 상태")
         }
     }
 }

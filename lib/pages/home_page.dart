@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:baring_windows/pages/dday_settings_page.dart';
 import 'package:baring_windows/services/notification_service.dart';
+import 'package:baring_windows/services/widget_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
@@ -92,6 +93,7 @@ class _HomePageState extends State<HomePage> {
 
     baringBox.put('routines', allRoutines);
     setState(() {});
+    WidgetService.syncWidget();
   }
 
   String _routineSubtitle(Map<String, dynamic> routine) {
@@ -155,6 +157,7 @@ class _HomePageState extends State<HomePage> {
     data[_todayKey] = todos;
     baringBox.put('todos', data);
     setState(() {});
+    WidgetService.syncWidget();
   }
 
   void _toggleTodo(int index) {

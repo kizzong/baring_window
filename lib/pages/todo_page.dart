@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:baring_windows/services/notification_service.dart';
+import 'package:baring_windows/services/widget_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -62,6 +63,7 @@ class _TodoPageState extends State<TodoPage> {
         );
       }),
     );
+    WidgetService.syncWidget();
   }
 
   List<Map<String, dynamic>> _getTodosForDay(DateTime day) {
@@ -311,6 +313,7 @@ class _TodoPageState extends State<TodoPage> {
         return copy;
       }).toList(),
     );
+    WidgetService.syncWidget();
   }
 
   List<Map<String, dynamic>> _getRoutinesForDay(DateTime day) {
