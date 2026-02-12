@@ -336,6 +336,138 @@ struct BaringWidget_Previews: PreviewProvider {
     }
 }
 
+// MARK: - 2x2 목표 위젯 (Small)
+
+struct BaringSmallWidgetEntryView: View {
+    var entry: Provider.Entry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // 상단: 목표 뱃지
+            HStack {
+                Text("목표")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.18))
+                    .cornerRadius(8)
+                Spacer()
+            }
+
+            Spacer().frame(height: 8)
+
+            // 제목
+            Text(entry.title)
+                .font(.system(size: 14, weight: .black))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+
+            Spacer().frame(height: 4)
+
+            // D-Day
+            Text(entry.dday)
+                .font(.system(size: 32, weight: .black))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+
+            Spacer(minLength: 0)
+
+            // 하단: 진행률 바 + 퍼센트 + 마감일
+            VStack(alignment: .leading, spacing: 4) {
+                // 퍼센트
+                HStack {
+                    Spacer()
+                    Text(entry.percent)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                }
+
+                // 프로그레스 바
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 999)
+                        .fill(Color.white.opacity(0.25))
+                        .frame(height: 6)
+
+                    GeometryReader { geo in
+                        RoundedRectangle(cornerRadius: 999)
+                            .fill(Color.white)
+                            .frame(width: geo.size.width * CGFloat(entry.progress), height: 6)
+                    }
+                    .frame(height: 6)
+                }
+                .frame(height: 6)
+
+                // 마감일
+                HStack {
+                    Spacer()
+                    Text(entry.targetDate)
+                        .font(.system(size: 9, weight: .regular))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .widgetURL(URL(string: "baringapp://open"))
+    }
+}
+
+struct BaringSmallWidget: Widget {
+    let kind: String = "BaringSmallWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: Provider()) { entry in
+            BaringSmallWidgetEntryView(entry: entry)
+                .containerBackground(for: .widget) {
+                    LinearGradient(
+                        gradient: Gradient(colors: gradientColors(for: entry.selectedPreset)),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+        }
+        .configurationDisplayName("Baring 목표")
+        .description("목표와 D-Day를 한눈에 확인하세요")
+        .supportedFamilies([.systemSmall])
+        .contentMarginsDisabled()
+    }
+}
+
+struct BaringSmallWidget_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            BaringSmallWidgetEntryView(entry: SimpleEntry(
+                date: Date(),
+                title: "전기기사",
+                dday: "D-30",
+                percent: "70%",
+                progress: 0.7,
+                startDate: "2024/01/01",
+                targetDate: "2024/12/31",
+                selectedPreset: 0
+            ))
+            .previewContext(WidgetPreviewContext(family: .systemSmall))
+            .previewDisplayName("2x2 파랑")
+
+            BaringSmallWidgetEntryView(entry: SimpleEntry(
+                date: Date(),
+                title: "토익 900",
+                dday: "D-DAY",
+                percent: "100%",
+                progress: 1.0,
+                startDate: "2024/01/01",
+                targetDate: "2024/12/31",
+                selectedPreset: 4
+            ))
+            .previewContext(WidgetPreviewContext(family: .systemSmall))
+            .previewDisplayName("2x2 보라")
+        }
+    }
+}
+
 // MARK: - 할 일 위젯
 
 struct WidgetItem: Identifiable {

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/small_widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background_0"
+    android:padding="14dp">
+
+    <!-- 상단: 목표 뱃지 -->
+    <TextView
+        android:id="@+id/small_badge_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:background="@drawable/badge_background"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp"
+        android:text="목표"
+        android:textColor="#FFFFFF"
+        android:textSize="9sp"
+        android:textStyle="bold" />
+
+    <!-- 제목 -->
+    <TextView
+        android:id="@+id/small_title_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/small_badge_text"
+        android:layout_marginTop="8dp"
+        android:text="전기기사"
+        android:textSize="15sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <!-- D-Day -->
+    <TextView
+        android:id="@+id/small_dday_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/small_title_text"
+        android:layout_marginTop="2dp"
+        android:text="D-30"
+        android:textSize="34sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold" />
+
+    <!-- 하단 영역 -->
+    <LinearLayout
+        android:id="@+id/small_progress_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical">
+
+        <!-- 퍼센트 -->
+        <TextView
+            android:id="@+id/small_percent_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="70%"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <!-- 프로그레스 바 -->
+        <ProgressBar
+            android:id="@+id/small_progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:progressDrawable="@drawable/progress_drawable"
+            android:max="100"
+            android:progress="70" />
+
+        <!-- 마감일 -->
+        <TextView
+            android:id="@+id/small_target_date_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="2024/12/31"
+            android:textColor="#B0FFFFFF"
+            android:textSize="9sp"
+            android:gravity="end" />
+
+    </LinearLayout>
+
+</RelativeLayout>

@@ -12,6 +12,7 @@ import SwiftUI
 struct BaringWidgetBundle: WidgetBundle {
     var body: some Widget {
         BaringWidget()
+        BaringSmallWidget()
         TodoWidget()
         BaringWidgetControl()
         BaringWidgetLiveActivity()

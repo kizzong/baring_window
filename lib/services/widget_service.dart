@@ -54,11 +54,13 @@ class WidgetService {
         );
         await HomeWidget.saveWidgetData<int>('selected_preset', selectedPreset);
 
-        // 플랫폼별 위젯 업데이트
+        // 플랫폼별 위젯 업데이트 (4x2 + 2x2)
         if (Platform.isAndroid) {
           await HomeWidget.updateWidget(androidName: 'HomeWidgetProvider');
+          await HomeWidget.updateWidget(androidName: 'SmallHomeWidgetProvider');
         } else if (Platform.isIOS) {
           await HomeWidget.updateWidget(iOSName: 'BaringWidget');
+          await HomeWidget.updateWidget(iOSName: 'BaringSmallWidget');
         }
       }
     } catch (e) {
