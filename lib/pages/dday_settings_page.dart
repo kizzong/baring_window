@@ -670,8 +670,10 @@ class _EventCardState extends State<EventCard> {
       return '완료';
     }
 
-    return Container(
-      padding: const EdgeInsets.all(18),
+    return GestureDetector(
+      onTap: widget.onMoreTap,
+      child: Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
         gradient: LinearGradient(
@@ -692,110 +694,66 @@ class _EventCardState extends State<EventCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  '목표',
-                  style: TextStyle(
+              Expanded(
+                child: Text(
+                  widget.title.isEmpty ? '이벤트' : widget.title,
+                  style: const TextStyle(
                     color: Colors.white,
+                    fontSize: 24,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 0.3,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Spacer(),
-              IconButton(
-                onPressed: widget.onMoreTap,
-                icon: Icon(Icons.more_horiz, color: Colors.white, size: 25),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Row(
-          //   children: [
-          //     Text(
-          //       widget.title.isEmpty ? '이벤트' : widget.title,
-          //       style: const TextStyle(
-          //         color: Colors.white,
-          //         fontSize: 30,
-          //         fontWeight: FontWeight.w900,
-          //       ),
-          //     ),
-          //     Spacer(),
-          //     Text(
-          //       dDayText(widget.targetDate),
-          //       style: const TextStyle(
-          //         color: Colors.white,
-          //         fontSize: 50,
-          //         fontWeight: FontWeight.w900,
-          //       ),
-          //     ),
-          //   ],
-          // ),
-          Text(
-            widget.title.isEmpty ? '이벤트' : widget.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          // Spacer(),
-          SizedBox(height: 10),
-          Text(
-            dDayText(widget.targetDate),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 50,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              // Text
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
-                '${widget.percent}%',
-                // "70%",
+                dDayText(widget.targetDate),
                 style: const TextStyle(
                   color: Colors.white,
+                  fontSize: 40,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Spacer(),
+              Text(
+                '${widget.percent}%',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: 10,
+              minHeight: 8,
               backgroundColor: Colors.white.withOpacity(0.25),
               valueColor: const AlwaysStoppedAnimation(Colors.white),
             ),
           ),
-
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Row(
             children: [
               Text(fmtDate(widget.startDate)),
-              Spacer(),
-              // Text("2026-2s-3 "),
+              const Spacer(),
               Text(fmtDate(widget.targetDate)),
             ],
           ),
         ],
+      ),
       ),
     );
   }
