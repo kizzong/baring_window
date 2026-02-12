@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:baring_windows/onboarding/on_boarding_service.dart';
 import 'package:baring_windows/onboarding/onboarding_page.dart';
 import 'package:baring_windows/services/widget_service.dart';
@@ -9,6 +11,7 @@ import 'package:baring_windows/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/adapters.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -18,6 +21,11 @@ void main() async {
   await Hive.initFlutter();
 
   await Hive.openBox('baring');
+
+  // iOS App Group 설정 (위젯과 앱 간 데이터 공유에 필수) ⭐
+  if (Platform.isIOS) {
+    await HomeWidget.setAppGroupId('group.baringWidget');
+  }
 
   // 위젯 초기화 ⭐
   await WidgetService.updateWidget(); // D-Day 위젯
@@ -72,7 +80,7 @@ class MainAppScreen extends StatefulWidget {
   State<MainAppScreen> createState() => _MainAppScreenState();
 }
 
-class _MainAppScreenState extends State<MainAppScreen> {
+class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
 
@@ -83,9 +91,25 @@ class _MainAppScreenState extends State<MainAppScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // 앱이 포그라운드로 돌아올 때 위젯 동기화
+      WidgetService.updateWidget();
+      WidgetService.syncWidget();
+    }
   }
 
   @override

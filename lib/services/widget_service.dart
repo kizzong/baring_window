@@ -6,8 +6,18 @@ import 'package:intl/intl.dart';
 import 'dart:io' show Platform;
 
 class WidgetService {
+  static bool _appGroupSet = false;
+
+  static Future<void> _ensureAppGroup() async {
+    if (!_appGroupSet && Platform.isIOS) {
+      await HomeWidget.setAppGroupId('group.baringWidget');
+      _appGroupSet = true;
+    }
+  }
+
   static Future<void> updateWidget() async {
     try {
+      await _ensureAppGroup();
       final baringBox = Hive.box("baring");
       final eventData = baringBox.get("eventCard");
 
@@ -83,6 +93,7 @@ class WidgetService {
   /// 오늘의 미완료 할 일 + 루틴을 홈 위젯에 동기화
   static Future<void> syncWidget() async {
     try {
+      await _ensureAppGroup();
       final baringBox = Hive.box("baring");
       final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final weekday = DateTime.now().weekday; // 1=월 ~ 7=일
