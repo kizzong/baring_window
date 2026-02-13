@@ -557,7 +557,9 @@ class _TodoPageState extends State<TodoPage> {
               }
             }
 
-            return AlertDialog(
+            return GestureDetector(
+              onTap: () => focusNode.unfocus(),
+              child: AlertDialog(
               backgroundColor: const Color(0xFF1A2332),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -646,6 +648,7 @@ class _TodoPageState extends State<TodoPage> {
                   ),
                 ),
               ],
+            ),
             );
           },
         );
@@ -699,7 +702,9 @@ class _TodoPageState extends State<TodoPage> {
               Navigator.pop(ctx);
             }
 
-            return AlertDialog(
+            return GestureDetector(
+              onTap: () => focusNode.unfocus(),
+              child: AlertDialog(
               backgroundColor: const Color(0xFF1A2332),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -926,6 +931,7 @@ class _TodoPageState extends State<TodoPage> {
                   ),
                 ),
               ],
+            ),
             );
           },
         );
@@ -985,7 +991,9 @@ class _TodoPageState extends State<TodoPage> {
               }
             }
 
-            return AlertDialog(
+            return GestureDetector(
+              onTap: () => focusNode.unfocus(),
+              child: AlertDialog(
               backgroundColor: const Color(0xFF1A2332),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -1070,6 +1078,7 @@ class _TodoPageState extends State<TodoPage> {
                   ),
                 ),
               ],
+            ),
             );
           },
         );
@@ -1135,7 +1144,9 @@ class _TodoPageState extends State<TodoPage> {
               Navigator.pop(ctx);
             }
 
-            return AlertDialog(
+            return GestureDetector(
+              onTap: () => focusNode.unfocus(),
+              child: AlertDialog(
               backgroundColor: const Color(0xFF1A2332),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -1352,6 +1363,7 @@ class _TodoPageState extends State<TodoPage> {
                   ),
                 ),
               ],
+            ),
             );
           },
         );
