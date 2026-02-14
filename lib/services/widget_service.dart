@@ -100,7 +100,7 @@ class WidgetService {
       final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final weekday = DateTime.now().weekday; // 1=월 ~ 7=일
 
-      List<Map<String, String>> items = [];
+      List<Map<String, dynamic>> items = [];
       int totalCount = 0;
 
       // 미완료 루틴 (먼저)
@@ -138,7 +138,9 @@ class WidgetService {
             totalCount++;
             final todoMap = Map<String, dynamic>.from(todo);
             if (todoMap['done'] != true) {
-              items.add({'type': 'todo', 'title': todoMap['title'] ?? ''});
+              final item = <String, dynamic>{'type': 'todo', 'title': todoMap['title'] ?? ''};
+              if (todoMap['time'] != null) item['time'] = todoMap['time'];
+              items.add(item);
             }
           }
         }

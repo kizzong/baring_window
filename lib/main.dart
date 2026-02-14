@@ -33,6 +33,7 @@ void main() async {
 
   // 알림 초기화
   await NotificationService.init();
+  await NotificationService.refreshDailyNotifications();
 
   // ⭐⭐⭐ 테스트용: 온보딩 리셋 (테스트 끝나면 삭제하세요!)
   // await OnboardingService.resetOnboarding();
@@ -109,6 +110,7 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
       // 앱이 포그라운드로 돌아올 때 위젯 동기화
       WidgetService.updateWidget();
       WidgetService.syncWidget();
+      NotificationService.refreshDailyNotifications();
     }
   }
 

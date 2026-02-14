@@ -933,8 +933,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             baringBox.put("morningTodoAlert", true);
                             baringBox.put("morningTimeHour", picked.hour);
                             baringBox.put("morningTimeMinute", picked.minute);
-                            NotificationService
-                                .scheduleDailyMorningNotification(picked.hour, picked.minute);
+                            NotificationService.refreshDailyNotifications();
                           } else {
                             setState(() => morningTodoAlert = false);
                             baringBox.put("morningTodoAlert", false);
@@ -957,8 +956,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             setState(() => morningTime = picked);
                             baringBox.put("morningTimeHour", picked.hour);
                             baringBox.put("morningTimeMinute", picked.minute);
-                            NotificationService
-                                .scheduleDailyMorningNotification(picked.hour, picked.minute);
+                            NotificationService.refreshDailyNotifications();
                           },
                         ),
                       ],
@@ -979,8 +977,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             baringBox.put("eveningTodoAlert", true);
                             baringBox.put("eveningTimeHour", picked.hour);
                             baringBox.put("eveningTimeMinute", picked.minute);
-                            NotificationService
-                                .scheduleDailyEveningNotification(picked.hour, picked.minute);
+                            NotificationService.refreshDailyNotifications();
                           } else {
                             setState(() => eveningTodoAlert = false);
                             baringBox.put("eveningTodoAlert", false);
@@ -1003,8 +1000,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             setState(() => eveningTime = picked);
                             baringBox.put("eveningTimeHour", picked.hour);
                             baringBox.put("eveningTimeMinute", picked.minute);
-                            NotificationService
-                                .scheduleDailyEveningNotification(picked.hour, picked.minute);
+                            NotificationService.refreshDailyNotifications();
                           },
                         ),
                       ],

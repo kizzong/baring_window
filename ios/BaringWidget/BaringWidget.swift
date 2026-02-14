@@ -474,20 +474,21 @@ struct WidgetItem: Identifiable {
     let id: Int
     let type: String   // "todo" or "routine"
     let title: String
+    let time: String?
 }
 
 struct TodoProvider: TimelineProvider {
     func placeholder(in context: Context) -> TodoEntry {
         TodoEntry(date: Date(), items: [
-            WidgetItem(id: 0, type: "todo", title: "할 일 1"),
-            WidgetItem(id: 1, type: "routine", title: "루틴 1"),
+            WidgetItem(id: 0, type: "todo", title: "할 일 1", time: "09:00"),
+            WidgetItem(id: 1, type: "routine", title: "루틴 1", time: nil),
         ], count: 2, total: 3)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TodoEntry) -> ()) {
         let entry = TodoEntry(date: Date(), items: [
-            WidgetItem(id: 0, type: "todo", title: "할 일 1"),
-            WidgetItem(id: 1, type: "routine", title: "루틴 1"),
+            WidgetItem(id: 0, type: "todo", title: "할 일 1", time: "09:00"),
+            WidgetItem(id: 1, type: "routine", title: "루틴 1", time: nil),
         ], count: 2, total: 3)
         completion(entry)
     }
@@ -504,7 +505,8 @@ struct TodoProvider: TimelineProvider {
             for (index, dict) in array.enumerated() {
                 let type = dict["type"] ?? "todo"
                 let title = dict["title"] ?? ""
-                items.append(WidgetItem(id: index, type: type, title: title))
+                let time = dict["time"]
+                items.append(WidgetItem(id: index, type: type, title: title, time: time))
             }
         }
 
@@ -566,15 +568,23 @@ struct TodoWidgetEntryView: View {
 
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(visibleItems) { item in
-                        HStack(spacing: 6) {
+                        HStack(alignment: .top, spacing: 6) {
                             Image(systemName: item.type == "routine" ? "arrow.trianglehead.2.clockwise" : "square")
                                 .font(.system(size: 10))
                                 .foregroundColor(item.type == "routine" ? Color(hex: "34D399") : .white.opacity(0.5))
-                            Text(item.title)
-                                .font(.system(size: 13))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
+                                .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(item.title)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                if let time = item.time, !time.isEmpty {
+                                    Text(time)
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.white.opacity(0.4))
+                                }
+                            }
                         }
                     }
                     if hasMore {
@@ -615,9 +625,9 @@ struct TodoWidget_Previews: PreviewProvider {
             TodoWidgetEntryView(entry: TodoEntry(
                 date: Date(),
                 items: [
-                    WidgetItem(id: 0, type: "todo", title: "공부하기"),
-                    WidgetItem(id: 1, type: "routine", title: "운동"),
-                    WidgetItem(id: 2, type: "todo", title: "책 읽기"),
+                    WidgetItem(id: 0, type: "todo", title: "공부하기", time: "09:00"),
+                    WidgetItem(id: 1, type: "routine", title: "운동", time: nil),
+                    WidgetItem(id: 2, type: "todo", title: "책 읽기", time: "14:30"),
                 ],
                 count: 3,
                 total: 5
@@ -631,6 +641,7 @@ struct TodoWidget_Previews: PreviewProvider {
                 count: 0,
                 total: 0
             ))
+            .previewContext(WidgetPreviewContext(family: .systemSmall))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
             .previewDisplayName("빈 상태")
         }

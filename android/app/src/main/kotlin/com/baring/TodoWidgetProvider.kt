@@ -7,6 +7,8 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.SpannableStringBuilder
+import android.text.style.AbsoluteSizeSpan
 import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.RemoteViews
@@ -59,16 +61,33 @@ class TodoWidgetProvider : es.antonborri.home_widget.HomeWidgetProvider() {
                             val item = items.getJSONObject(i)
                             val type = item.getString("type")
                             val title = item.getString("title")
+                            val time = if (item.has("time")) item.getString("time") else null
                             val icon = if (type == "routine") "↻ " else "☐ "
-                            val text = SpannableString("$icon $title")
+
+                            val builder = SpannableStringBuilder("$icon $title")
                             if (type == "routine") {
-                                text.setSpan(
+                                builder.setSpan(
                                     ForegroundColorSpan(Color.parseColor("#34D399")),
                                     0, icon.length,
                                     Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                                 )
                             }
-                            setTextViewText(itemIds[i], text)
+                            if (time != null && time.isNotEmpty() && type == "todo") {
+                                val padding = "      "
+                                builder.append("\n$padding$time")
+                                val timeStart = builder.length - time.length
+                                builder.setSpan(
+                                    AbsoluteSizeSpan(10, true),
+                                    timeStart, builder.length,
+                                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                                builder.setSpan(
+                                    ForegroundColorSpan(Color.parseColor("#66FFFFFF")),
+                                    timeStart, builder.length,
+                                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                            }
+                            setTextViewText(itemIds[i], builder)
                             setViewVisibility(itemIds[i], View.VISIBLE)
                         }
 

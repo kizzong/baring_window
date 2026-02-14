@@ -21,6 +21,7 @@ class _TodoPageState extends State<TodoPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
+  StateSetter? _sheetStateSetter;
 
   Map<String, List<Map<String, dynamic>>> _todos = {};
   List<Map<String, dynamic>> _routines = [];
@@ -79,6 +80,7 @@ class _TodoPageState extends State<TodoPage> {
     _todos[key]!.add(todo);
     _saveTodos();
     setState(() {});
+    _sheetStateSetter?.call(() {});
 
     // 알림 스케줄
     if (time != null && notifyBefore != null) {
@@ -104,6 +106,7 @@ class _TodoPageState extends State<TodoPage> {
 
     _saveTodos();
     setState(() {});
+    _sheetStateSetter?.call(() {});
 
     // 새 알림 스케줄
     if (time != null && notifyBefore != null) {
@@ -147,8 +150,22 @@ class _TodoPageState extends State<TodoPage> {
     final isDone = todo['done'] == true;
     final hasNotification = todo['time'] != null && todo['notifyBefore'] != null;
 
-    // 알림이 있는 할 일을 완료 체크하는 경우 → 확인 다이얼로그
-    if (!isDone && hasNotification) {
+    // 알림 시간이 이미 지났는지 확인
+    bool isTimePassed = false;
+    if (hasNotification) {
+      final parts = (todo['time'] as String).split(':');
+      final todoDateTime = DateTime(
+        _selectedDay.year,
+        _selectedDay.month,
+        _selectedDay.day,
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+      );
+      isTimePassed = todoDateTime.isBefore(DateTime.now());
+    }
+
+    // 알림이 있는 할 일을 완료 체크하는 경우 → 확인 다이얼로그 (시간이 지났으면 바로 완료 처리)
+    if (!isDone && hasNotification && !isTimePassed) {
       final notifyBefore = todo['notifyBefore'] as int;
       final notifyLabel = notifyBefore >= 60
           ? '${notifyBefore ~/ 60}시간 전'
@@ -193,6 +210,7 @@ class _TodoPageState extends State<TodoPage> {
                 _cancelNotificationForTodo(key, index);
                 _saveTodos();
                 setState(() {});
+                _sheetStateSetter?.call(() {});
               },
               child: const Text(
                 '완료',
@@ -214,6 +232,17 @@ class _TodoPageState extends State<TodoPage> {
       _scheduleNotificationForTodo(key, index, _todos[key]![index]);
       _saveTodos();
       setState(() {});
+      _sheetStateSetter?.call(() {});
+      return;
+    }
+
+    // 알림 시간이 지난 할 일 완료 → 다이얼로그 없이 바로 완료 처리
+    if (!isDone && hasNotification && isTimePassed) {
+      _todos[key]![index]['done'] = true;
+      _cancelNotificationForTodo(key, index);
+      _saveTodos();
+      setState(() {});
+      _sheetStateSetter?.call(() {});
       return;
     }
 
@@ -221,9 +250,42 @@ class _TodoPageState extends State<TodoPage> {
     _todos[key]![index]['done'] = !isDone;
     _saveTodos();
     setState(() {});
+    _sheetStateSetter?.call(() {});
   }
 
   void _deleteTodo(int index) {
+    final key = _dayKey(_selectedDay);
+    if (_todos[key] == null || index >= _todos[key]!.length) return;
+    final todo = _todos[key]![index];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A2332),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('할 일 삭제', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+        content: Text(
+          '"${todo['title']}" 할 일을 삭제하시겠습니까?',
+          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _performDeleteTodo(index);
+            },
+            child: const Text('삭제', style: TextStyle(color: Color(0xFFFF4D4D), fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performDeleteTodo(int index) {
     final key = _dayKey(_selectedDay);
     if (_todos[key] != null && index < _todos[key]!.length) {
       final removed = _todos[key]!.removeAt(index);
@@ -238,6 +300,7 @@ class _TodoPageState extends State<TodoPage> {
       }
       _saveTodos();
       setState(() {});
+      _sheetStateSetter?.call(() {});
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -264,6 +327,7 @@ class _TodoPageState extends State<TodoPage> {
               _todos[key]!.insert(index, removed);
               _saveTodos();
               setState(() {});
+              _sheetStateSetter?.call(() {});
 
               // 되돌리기 시 알림 재스케줄
               if (removed['time'] != null && removed['notifyBefore'] != null) {
@@ -284,6 +348,29 @@ class _TodoPageState extends State<TodoPage> {
     _todos[key]!.insert(newIndex, item);
     _saveTodos();
     setState(() {});
+    _sheetStateSetter?.call(() {});
+  }
+
+  void _reorderRoutine(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) newIndex -= 1;
+    if (oldIndex == newIndex) return;
+
+    final routinesForDay = _getRoutinesForDay(_selectedDay);
+    if (oldIndex >= routinesForDay.length || newIndex >= routinesForDay.length) return;
+
+    final movedId = routinesForDay[oldIndex]['id'];
+    final targetId = routinesForDay[newIndex]['id'];
+
+    final fromGlobal = _routines.indexWhere((r) => r['id'] == movedId);
+    final toGlobal = _routines.indexWhere((r) => r['id'] == targetId);
+    if (fromGlobal == -1 || toGlobal == -1) return;
+
+    final moved = _routines.removeAt(fromGlobal);
+    _routines.insert(toGlobal, moved);
+
+    _saveRoutines();
+    setState(() {});
+    _sheetStateSetter?.call(() {});
   }
 
   // ── 루틴 데이터 관리 ──
@@ -352,6 +439,7 @@ class _TodoPageState extends State<TodoPage> {
     _routines.add(routine);
     _saveRoutines();
     setState(() {});
+    _sheetStateSetter?.call(() {});
 
     // 알림 스케줄
     if (time != null && notifyBefore != null) {
@@ -391,6 +479,7 @@ class _TodoPageState extends State<TodoPage> {
 
     _saveRoutines();
     setState(() {});
+    _sheetStateSetter?.call(() {});
 
     // 새 알림 스케줄
     if (time != null && notifyBefore != null) {
@@ -413,9 +502,42 @@ class _TodoPageState extends State<TodoPage> {
     _routines[globalIndex]['completions'] = completions;
     _saveRoutines();
     setState(() {});
+    _sheetStateSetter?.call(() {});
   }
 
   void _deleteRoutine(int routineIndex) {
+    final routinesForDay = _getRoutinesForDay(_selectedDay);
+    if (routineIndex >= routinesForDay.length) return;
+    final routine = routinesForDay[routineIndex];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A2332),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('루틴 삭제', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+        content: Text(
+          '"${routine['title']}" 루틴을 삭제하시겠습니까?',
+          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _performDeleteRoutine(routineIndex);
+            },
+            child: const Text('삭제', style: TextStyle(color: Color(0xFFFF4D4D), fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performDeleteRoutine(int routineIndex) {
     final routinesForDay = _getRoutinesForDay(_selectedDay);
     if (routineIndex >= routinesForDay.length) return;
 
@@ -432,6 +554,7 @@ class _TodoPageState extends State<TodoPage> {
 
     _saveRoutines();
     setState(() {});
+    _sheetStateSetter?.call(() {});
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -456,6 +579,7 @@ class _TodoPageState extends State<TodoPage> {
             _routines.insert(globalIndex, removed);
             _saveRoutines();
             setState(() {});
+            _sheetStateSetter?.call(() {});
 
             if (removed['time'] != null && removed['notifyBefore'] != null) {
               _scheduleRoutineNotification(removed);
@@ -1755,16 +1879,485 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
+  void _showDayDetailSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0B1623),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            _sheetStateSetter = setSheetState;
+
+            final todosForDay = _getTodosForDay(_selectedDay);
+            final routinesForDay = _getRoutinesForDay(_selectedDay);
+            final routineDoneCount = routinesForDay
+                .where((r) => _isRoutineCompletedForDay(r, _selectedDay))
+                .length;
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 드래그 핸들바
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // 날짜 헤더
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Row(
+                      children: [
+                        Text(
+                          DateFormat('M월 d일 (E)', 'ko').format(_selectedDay),
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // 스크롤 가능한 콘텐츠
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        // ── 루틴 섹션 ──
+                        if (routinesForDay.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.repeat_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  '루틴',
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2D86FF).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$routineDoneCount/${routinesForDay.length}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF2D86FF),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ReorderableListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: routinesForDay.length,
+                            onReorder: _reorderRoutine,
+                            proxyDecorator: (child, index, animation) {
+                              return Material(
+                                color: Colors.transparent,
+                                elevation: 4,
+                                shadowColor: Colors.black45,
+                                borderRadius: BorderRadius.circular(18),
+                                child: child,
+                              );
+                            },
+                            itemBuilder: (context, i) {
+                              final routine = routinesForDay[i];
+                              final isDone = _isRoutineCompletedForDay(routine, _selectedDay);
+                              final subtitle = _routineSubtitle(routine);
+                              return Padding(
+                                key: ValueKey(routine['id']),
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: GestureDetector(
+                                  onTap: () => _showEditRoutineDialog(i),
+                                  child: Container(
+                                    padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF121E2B),
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.07),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => _toggleRoutine(i),
+                                          behavior: HitTestBehavior.opaque,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.repeat_rounded,
+                                                size: 18,
+                                                color: isDone
+                                                    ? Colors.white.withOpacity(0.3)
+                                                    : const Color(0xFF2D86FF).withOpacity(0.7),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                height: 26,
+                                                width: 26,
+                                                decoration: BoxDecoration(
+                                                  color: isDone
+                                                      ? const Color(0xFF2D86FF)
+                                                      : Colors.transparent,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: isDone
+                                                        ? Colors.transparent
+                                                        : Colors.white.withOpacity(0.18),
+                                                    width: 1.6,
+                                                  ),
+                                                ),
+                                                child: isDone
+                                                    ? const Icon(
+                                                        Icons.check,
+                                                        size: 18,
+                                                        color: Colors.white,
+                                                      )
+                                                    : null,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                routine['title'] ?? '',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 16,
+                                                  decoration: isDone
+                                                      ? TextDecoration.lineThrough
+                                                      : null,
+                                                  color: isDone
+                                                      ? Colors.white.withOpacity(0.45)
+                                                      : Colors.white,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                subtitle,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isDone
+                                                      ? Colors.white.withOpacity(0.3)
+                                                      : Colors.white.withOpacity(0.5),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _deleteRoutine(i),
+                                          icon: Icon(
+                                            Icons.close,
+                                            size: 18,
+                                            color: Colors.white.withOpacity(0.3),
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 32,
+                                            minHeight: 32,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+
+                        // ── 할일 섹션 ──
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.task_alt_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '할 일',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (todosForDay.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2D86FF).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${todosForDay.where((t) => t['done'] == true).length}/${todosForDay.length}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF2D86FF),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              const Spacer(),
+                              IconButton(
+                                onPressed: _showAddDialog,
+                                icon: const Icon(
+                                  Icons.add,
+                                  color: Color(0xFF2D86FF),
+                                  size: 25,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        if (todosForDay.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF121E2B),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.07),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '할 일이 없습니다',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.3),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ReorderableListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: todosForDay.length,
+                            onReorder: _reorderTodo,
+                            proxyDecorator: (child, index, animation) {
+                              return Material(
+                                color: Colors.transparent,
+                                elevation: 4,
+                                shadowColor: Colors.black45,
+                                borderRadius: BorderRadius.circular(18),
+                                child: child,
+                              );
+                            },
+                            itemBuilder: (context, index) {
+                              final todo = todosForDay[index];
+                              final isDone = todo['done'] == true;
+                              final timeStr = todo['time'] as String?;
+                              final notifyBefore = todo['notifyBefore'] as int?;
+                              return Padding(
+                                key: ValueKey('todo_${todo['title']}_$index'),
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: GestureDetector(
+                                  onTap: () => _showEditTodoDialog(index),
+                                  child: Container(
+                                    padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF121E2B),
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.07),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => _toggleTodo(index),
+                                          behavior: HitTestBehavior.opaque,
+                                          child: Container(
+                                            height: 26,
+                                            width: 26,
+                                            decoration: BoxDecoration(
+                                              color: isDone
+                                                  ? const Color(0xFF2D86FF)
+                                                  : Colors.transparent,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: isDone
+                                                    ? Colors.transparent
+                                                    : Colors.white.withOpacity(0.18),
+                                                width: 1.6,
+                                              ),
+                                            ),
+                                            child: isDone
+                                                ? const Icon(
+                                                    Icons.check,
+                                                    size: 18,
+                                                    color: Colors.white,
+                                                  )
+                                                : null,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                todo['title'] ?? '',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 16,
+                                                  decoration: isDone
+                                                      ? TextDecoration.lineThrough
+                                                      : null,
+                                                  color: isDone
+                                                      ? Colors.white.withOpacity(0.45)
+                                                      : Colors.white,
+                                                ),
+                                              ),
+                                              if (timeStr != null) ...[
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.access_time_rounded,
+                                                      size: 13,
+                                                      color: isDone
+                                                          ? Colors.white.withOpacity(0.3)
+                                                          : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      timeStr,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: isDone
+                                                            ? Colors.white.withOpacity(0.3)
+                                                            : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                      ),
+                                                    ),
+                                                    if (notifyBefore != null) ...[
+                                                      const SizedBox(width: 6),
+                                                      Icon(
+                                                        Icons.notifications_active_outlined,
+                                                        size: 13,
+                                                        color: isDone
+                                                            ? Colors.white.withOpacity(0.3)
+                                                            : Colors.white.withOpacity(0.4),
+                                                      ),
+                                                      const SizedBox(width: 2),
+                                                      Text(
+                                                        notifyBefore >= 60
+                                                            ? '${notifyBefore ~/ 60}시간 전'
+                                                            : '$notifyBefore분 전',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w500,
+                                                          color: isDone
+                                                              ? Colors.white.withOpacity(0.3)
+                                                              : Colors.white.withOpacity(0.4),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _deleteTodo(index),
+                                          icon: Icon(
+                                            Icons.close,
+                                            size: 18,
+                                            color: Colors.white.withOpacity(0.3),
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 32,
+                                            minHeight: 32,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      _sheetStateSetter = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final todosForDay = _getTodosForDay(_selectedDay);
-    final routinesForDay = _getRoutinesForDay(_selectedDay);
-    final selectedKey = _dayKey(_selectedDay);
-
-    final routineDoneCount = routinesForDay
-        .where((r) => _isRoutineCompletedForDay(r, _selectedDay))
-        .length;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0B1623),
       appBar: AppBar(
@@ -1816,7 +2409,8 @@ class _TodoPageState extends State<TodoPage> {
           // Calendar
           TableCalendar(
             locale: 'ko_KR',
-            rowHeight: 120,
+            rowHeight: 130,
+            availableGestures: AvailableGestures.none,
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
@@ -1830,6 +2424,7 @@ class _TodoPageState extends State<TodoPage> {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
               });
+              _showDayDetailSheet();
             },
             onPageChanged: (focusedDay) {
               _focusedDay = focusedDay;
@@ -1921,408 +2516,6 @@ class _TodoPageState extends State<TodoPage> {
                 fontSize: 13,
               ),
             ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // 루틴 + 할일 리스트
-          Expanded(
-            child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      // ── 날짜 헤더 ──
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        child: Row(
-                          children: [
-                            Text(
-                              DateFormat('M월 d일 (E)', 'ko').format(_selectedDay),
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // ── 루틴 섹션 ──
-                      if (routinesForDay.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.repeat_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                '루틴',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2D86FF).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '$routineDoneCount/${routinesForDay.length}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2D86FF),
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ...List.generate(routinesForDay.length, (i) {
-                            final routine = routinesForDay[i];
-                            final isDone = _isRoutineCompletedForDay(routine, _selectedDay);
-                            final subtitle = _routineSubtitle(routine);
-
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: GestureDetector(
-                                  onTap: () => _showEditRoutineDialog(i),
-                                  child: Container(
-                                    padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF121E2B),
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.07),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // 반복 아이콘 + 체크박스
-                                        GestureDetector(
-                                          onTap: () => _toggleRoutine(i),
-                                          behavior: HitTestBehavior.opaque,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.repeat_rounded,
-                                                size: 18,
-                                                color: isDone
-                                                    ? Colors.white.withOpacity(0.3)
-                                                    : const Color(0xFF2D86FF).withOpacity(0.7),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                height: 26,
-                                                width: 26,
-                                                decoration: BoxDecoration(
-                                                  color: isDone
-                                                      ? const Color(0xFF2D86FF)
-                                                      : Colors.transparent,
-                                                  borderRadius: BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                    color: isDone
-                                                        ? Colors.transparent
-                                                        : Colors.white.withOpacity(0.18),
-                                                    width: 1.6,
-                                                  ),
-                                                ),
-                                                child: isDone
-                                                    ? const Icon(
-                                                        Icons.check,
-                                                        size: 18,
-                                                        color: Colors.white,
-                                                      )
-                                                    : null,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                routine['title'] ?? '',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 16,
-                                                  decoration: isDone
-                                                      ? TextDecoration.lineThrough
-                                                      : null,
-                                                  color: isDone
-                                                      ? Colors.white.withOpacity(0.45)
-                                                      : Colors.white,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                subtitle,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDone
-                                                      ? Colors.white.withOpacity(0.3)
-                                                      : Colors.white.withOpacity(0.5),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        IconButton(
-                                          onPressed: () => _deleteRoutine(i),
-                                          icon: Icon(
-                                            Icons.close,
-                                            size: 18,
-                                            color: Colors.white.withOpacity(0.3),
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(
-                                            minWidth: 32,
-                                            minHeight: 32,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ),
-                            );
-                          }),
-                        const SizedBox(height: 8),
-                      ],
-
-                      // ── 할일 섹션 ──
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.task_alt_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              '할 일',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (todosForDay.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2D86FF).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '${todosForDay.where((t) => t['done'] == true).length}/${todosForDay.length}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2D86FF),
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            const Spacer(),
-                            IconButton(
-                              onPressed: _showAddDialog,
-                              icon: const Icon(
-                                Icons.add,
-                                color: Color(0xFF2D86FF),
-                                size: 25,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      if (todosForDay.isEmpty)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF121E2B),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.07),
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '할 일이 없습니다',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.3),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        ...List.generate(todosForDay.length, (index) {
-                          final todo = todosForDay[index];
-                          final isDone = todo['done'] == true;
-                          final timeStr = todo['time'] as String?;
-                          final notifyBefore = todo['notifyBefore'] as int?;
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: GestureDetector(
-                                onTap: () => _showEditTodoDialog(index),
-                                child: Container(
-                                  padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF121E2B),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.07),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      GestureDetector(
-                                        onTap: () => _toggleTodo(index),
-                                        behavior: HitTestBehavior.opaque,
-                                        child: Container(
-                                          height: 26,
-                                          width: 26,
-                                          decoration: BoxDecoration(
-                                            color: isDone
-                                                ? const Color(0xFF2D86FF)
-                                                : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: isDone
-                                                  ? Colors.transparent
-                                                  : Colors.white.withOpacity(0.18),
-                                              width: 1.6,
-                                            ),
-                                          ),
-                                          child: isDone
-                                              ? const Icon(
-                                                  Icons.check,
-                                                  size: 18,
-                                                  color: Colors.white,
-                                                )
-                                              : null,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              todo['title'] ?? '',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 16,
-                                                decoration: isDone
-                                                    ? TextDecoration.lineThrough
-                                                    : null,
-                                                color: isDone
-                                                    ? Colors.white.withOpacity(0.45)
-                                                    : Colors.white,
-                                              ),
-                                            ),
-                                            if (timeStr != null) ...[
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.access_time_rounded,
-                                                    size: 13,
-                                                    color: isDone
-                                                        ? Colors.white.withOpacity(0.3)
-                                                        : const Color(0xFF2D86FF).withOpacity(0.7),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    timeStr,
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: isDone
-                                                          ? Colors.white.withOpacity(0.3)
-                                                          : const Color(0xFF2D86FF).withOpacity(0.7),
-                                                    ),
-                                                  ),
-                                                  if (notifyBefore != null) ...[
-                                                    const SizedBox(width: 6),
-                                                    Icon(
-                                                      Icons.notifications_active_outlined,
-                                                      size: 13,
-                                                      color: isDone
-                                                          ? Colors.white.withOpacity(0.3)
-                                                          : Colors.white.withOpacity(0.4),
-                                                    ),
-                                                    const SizedBox(width: 2),
-                                                    Text(
-                                                      notifyBefore >= 60
-                                                          ? '${notifyBefore ~/ 60}시간 전'
-                                                          : '$notifyBefore분 전',
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        fontWeight: FontWeight.w500,
-                                                        color: isDone
-                                                            ? Colors.white.withOpacity(0.3)
-                                                            : Colors.white.withOpacity(0.4),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(
-                                        onPressed: () => _deleteTodo(index),
-                                        icon: Icon(
-                                          Icons.close,
-                                          size: 18,
-                                          color: Colors.white.withOpacity(0.3),
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(
-                                          minWidth: 32,
-                                          minHeight: 32,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ),
-                          );
-                        }),
-
-                      const SizedBox(height: 20),
-                    ],
-                  ),
           ),
         ],
       ),
