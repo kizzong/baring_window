@@ -6,6 +6,7 @@ import 'package:baring_windows/services/widget_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,6 +17,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Box baringBox = Hive.box("baring");
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
 
   // 계산 함수들 추가
   int _calculateDays(DateTime targetDate) {
@@ -45,6 +48,168 @@ class _HomePageState extends State<HomePage> {
   static const _dayNames = ['월', '화', '수', '목', '금', '토', '일'];
 
   String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  String _dayKey(DateTime day) => DateFormat('yyyy-MM-dd').format(day);
+
+  List<Map<String, dynamic>> _getTodosForDay(DateTime day) {
+    final raw = baringBox.get('todos');
+    if (raw == null) return [];
+    final Map data = Map.from(raw);
+    final list = data[_dayKey(day)];
+    if (list == null) return [];
+    return (list as List).map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  List<Map<String, dynamic>> _getRoutinesForDay(DateTime day) {
+    final raw = baringBox.get('routines');
+    if (raw == null) return [];
+    final allRoutines = (raw as List)
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final weekday = day.weekday;
+    return allRoutines.where((r) {
+      if (r['type'] == 'daily') return true;
+      if (r['type'] == 'weekly') {
+        final days = List<int>.from(r['days'] ?? []);
+        return days.contains(weekday);
+      }
+      return false;
+    }).toList();
+  }
+
+  Widget _buildCalendarCell(DateTime day, {
+    required bool isSelected,
+    required bool isToday,
+    bool isWeekend = false,
+  }) {
+    final todos = _getTodosForDay(day);
+    final routines = _getRoutinesForDay(day);
+
+    final allItems = <({String title, String? time, bool hasAlarm, Color color})>[];
+    for (final r in routines) {
+      allItems.add((
+        title: r['title'] ?? '',
+        time: null,
+        hasAlarm: false,
+        color: const Color(0xFF22C55E),
+      ));
+    }
+    for (final t in todos) {
+      allItems.add((
+        title: t['title'] ?? '',
+        time: t['time'] as String?,
+        hasAlarm: t['notifyBefore'] != null,
+        color: const Color(0xFF2D86FF),
+      ));
+    }
+
+    final TextStyle dateTextStyle;
+    if (isSelected) {
+      dateTextStyle = const TextStyle(
+        color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14,
+      );
+    } else if (isToday) {
+      dateTextStyle = const TextStyle(
+        color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14,
+      );
+    } else if (isWeekend) {
+      dateTextStyle = TextStyle(
+        color: Colors.white.withOpacity(0.7),
+        fontWeight: FontWeight.w600, fontSize: 14,
+      );
+    } else {
+      dateTextStyle = const TextStyle(
+        color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14,
+      );
+    }
+
+    BoxDecoration? dateDecoration;
+    if (isSelected) {
+      dateDecoration = const BoxDecoration(
+        color: Color(0xFF2D86FF), shape: BoxShape.circle,
+      );
+    } else if (isToday) {
+      dateDecoration = BoxDecoration(
+        color: const Color(0xFF2D86FF).withOpacity(0.3),
+        shape: BoxShape.circle,
+      );
+    }
+
+    const int maxVisible = 3;
+    final int remainingCount =
+        allItems.length > maxVisible ? allItems.length - maxVisible : 0;
+    final visibleItems = allItems.take(maxVisible).toList();
+
+    return SizedBox.expand(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Container(
+            width: 28, height: 28,
+            decoration: dateDecoration,
+            alignment: Alignment.center,
+            child: Text('${day.day}', style: dateTextStyle),
+          ),
+          const SizedBox(height: 2),
+          ...visibleItems.map((item) => Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+            decoration: BoxDecoration(
+              color: item.color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10, fontWeight: FontWeight.w600,
+                    color: item.color, height: 1.2,
+                  ),
+                ),
+                if (item.time != null)
+                  Row(
+                    children: [
+                      Text(
+                        item.time!,
+                        style: TextStyle(
+                          fontSize: 8, fontWeight: FontWeight.w500,
+                          color: item.color.withOpacity(0.7), height: 1.2,
+                        ),
+                      ),
+                      if (item.hasAlarm) ...[
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.notifications_active_outlined,
+                          size: 8,
+                          color: item.color.withOpacity(0.7),
+                        ),
+                      ],
+                    ],
+                  ),
+              ],
+            ),
+          )),
+          if (remainingCount > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Text(
+                '+$remainingCount',
+                style: TextStyle(
+                  fontSize: 8, fontWeight: FontWeight.w600,
+                  color: Colors.white.withOpacity(0.4), height: 1.2,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
   // ── 루틴 관련 ──
 
@@ -345,6 +510,98 @@ class _HomePageState extends State<HomePage> {
                   );
                   setState(() {}); // 돌아왔을 때 데이터 새로고침
                 },
+              ),
+              const SizedBox(height: 24),
+
+              // 캘린더
+              TableCalendar(
+                locale: 'ko_KR',
+                rowHeight: 120,
+                availableGestures: AvailableGestures.none,
+                firstDay: DateTime.utc(2020, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                calendarFormat: CalendarFormat.month,
+                availableCalendarFormats: const {
+                  CalendarFormat.month: '월',
+                },
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+                onPageChanged: (focusedDay) {
+                  _focusedDay = focusedDay;
+                },
+                calendarBuilders: CalendarBuilders(
+                  defaultBuilder: (context, day, focusedDay) {
+                    final isWeekend = day.weekday == DateTime.saturday ||
+                        day.weekday == DateTime.sunday;
+                    return _buildCalendarCell(day,
+                      isSelected: false, isToday: false, isWeekend: isWeekend,
+                    );
+                  },
+                  todayBuilder: (context, day, focusedDay) {
+                    return _buildCalendarCell(day,
+                      isSelected: false, isToday: true,
+                    );
+                  },
+                  selectedBuilder: (context, day, focusedDay) {
+                    return _buildCalendarCell(day,
+                      isSelected: true,
+                      isToday: isSameDay(day, DateTime.now()),
+                    );
+                  },
+                ),
+                calendarStyle: CalendarStyle(
+                  outsideDaysVisible: false,
+                  cellMargin: const EdgeInsets.all(1),
+                  defaultTextStyle: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600,
+                  ),
+                  weekendTextStyle: const TextStyle(
+                    color: Colors.white70, fontWeight: FontWeight.w600,
+                  ),
+                  todayDecoration: BoxDecoration(
+                    color: const Color(0xFF2D86FF).withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  todayTextStyle: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w700,
+                  ),
+                  selectedDecoration: const BoxDecoration(
+                    color: Color(0xFF2D86FF), shape: BoxShape.circle,
+                  ),
+                  selectedTextStyle: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w700,
+                  ),
+                  markersMaxCount: 0,
+                ),
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  titleTextStyle: const TextStyle(
+                    color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700,
+                  ),
+                  leftChevronIcon: const Icon(
+                    Icons.chevron_left, color: Colors.white,
+                  ),
+                  rightChevronIcon: const Icon(
+                    Icons.chevron_right, color: Colors.white,
+                  ),
+                ),
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  weekdayStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                    fontWeight: FontWeight.w600, fontSize: 13,
+                  ),
+                  weekendStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.4),
+                    fontWeight: FontWeight.w600, fontSize: 13,
+                  ),
+                ),
               ),
               const SizedBox(height: 32),
 

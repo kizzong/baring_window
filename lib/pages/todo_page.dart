@@ -1600,6 +1600,161 @@ class _TodoPageState extends State<TodoPage> {
     return parts.join(' · ');
   }
 
+  Widget _buildCalendarCell(DateTime day, {
+    required bool isSelected,
+    required bool isToday,
+    bool isWeekend = false,
+  }) {
+    final todos = _getTodosForDay(day);
+    final routines = _getRoutinesForDay(day);
+
+    // 루틴 먼저, 할일 다음 순서로 표시
+    final allItems = <({String title, String? time, bool hasAlarm, Color color})>[];
+    for (final r in routines) {
+      allItems.add((
+        title: r['title'] ?? '',
+        time: null,
+        hasAlarm: false,
+        color: const Color(0xFF22C55E),
+      ));
+    }
+    for (final t in todos) {
+      allItems.add((
+        title: t['title'] ?? '',
+        time: t['time'] as String?,
+        hasAlarm: t['notifyBefore'] != null,
+        color: const Color(0xFF2D86FF),
+      ));
+    }
+
+    // 날짜 텍스트 스타일
+    final TextStyle dateTextStyle;
+    if (isSelected) {
+      dateTextStyle = const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w700,
+        fontSize: 14,
+      );
+    } else if (isToday) {
+      dateTextStyle = const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w700,
+        fontSize: 14,
+      );
+    } else if (isWeekend) {
+      dateTextStyle = TextStyle(
+        color: Colors.white.withOpacity(0.7),
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      );
+    } else {
+      dateTextStyle = const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      );
+    }
+
+    // 날짜 원형 배경
+    BoxDecoration? dateDecoration;
+    if (isSelected) {
+      dateDecoration = const BoxDecoration(
+        color: Color(0xFF2D86FF),
+        shape: BoxShape.circle,
+      );
+    } else if (isToday) {
+      dateDecoration = BoxDecoration(
+        color: const Color(0xFF2D86FF).withOpacity(0.3),
+        shape: BoxShape.circle,
+      );
+    }
+
+    const int maxVisible = 3;
+    final int remainingCount =
+        allItems.length > maxVisible ? allItems.length - maxVisible : 0;
+    final visibleItems = allItems.take(maxVisible).toList();
+
+    return SizedBox.expand(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          // 날짜 숫자
+          Container(
+            width: 28,
+            height: 28,
+            decoration: dateDecoration,
+            alignment: Alignment.center,
+            child: Text('${day.day}', style: dateTextStyle),
+          ),
+          const SizedBox(height: 2),
+          // 할일 제목들
+          ...visibleItems.map((item) => Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+            decoration: BoxDecoration(
+              color: item.color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: item.color,
+                    height: 1.2,
+                  ),
+                ),
+                if (item.time != null)
+                  Row(
+                    children: [
+                      Text(
+                        item.time!,
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w500,
+                          color: item.color.withOpacity(0.7),
+                          height: 1.2,
+                        ),
+                      ),
+                      if (item.hasAlarm) ...[
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.notifications_active_outlined,
+                          size: 8,
+                          color: item.color.withOpacity(0.7),
+                        ),
+                      ],
+                    ],
+                  ),
+              ],
+            ),
+          )),
+          // +N 표시
+          if (remainingCount > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Text(
+                '+$remainingCount',
+                style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withOpacity(0.4),
+                  height: 1.2,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final todosForDay = _getTodosForDay(_selectedDay);
@@ -1661,6 +1816,7 @@ class _TodoPageState extends State<TodoPage> {
           // Calendar
           TableCalendar(
             locale: 'ko_KR',
+            rowHeight: 120,
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
@@ -1685,46 +1841,31 @@ class _TodoPageState extends State<TodoPage> {
               return List.generate(count.clamp(0, 4), (_) => '');
             },
             calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, day, events) {
-                final hasTodos = _getTodosForDay(day).isNotEmpty;
-                final hasRoutines = _getRoutinesForDay(day).isNotEmpty;
-                if (!hasTodos && !hasRoutines) return null;
-
-                final dots = <Widget>[];
-                if (hasRoutines) {
-                  dots.add(Container(
-                    width: 6, height: 6,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF22C55E),
-                      shape: BoxShape.circle,
-                    ),
-                  ));
-                }
-                if (hasTodos) {
-                  final todoCount = _getTodosForDay(day).length.clamp(1, 4);
-                  for (var i = 0; i < todoCount; i++) {
-                    dots.add(Container(
-                      width: 6, height: 6,
-                      margin: const EdgeInsets.symmetric(horizontal: 0.5),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2D86FF),
-                        shape: BoxShape.circle,
-                      ),
-                    ));
-                  }
-                }
-                return Positioned(
-                  bottom: 1,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: dots,
-                  ),
+              defaultBuilder: (context, day, focusedDay) {
+                final isWeekend = day.weekday == DateTime.saturday ||
+                    day.weekday == DateTime.sunday;
+                return _buildCalendarCell(day,
+                  isSelected: false,
+                  isToday: false,
+                  isWeekend: isWeekend,
+                );
+              },
+              todayBuilder: (context, day, focusedDay) {
+                return _buildCalendarCell(day,
+                  isSelected: false,
+                  isToday: true,
+                );
+              },
+              selectedBuilder: (context, day, focusedDay) {
+                return _buildCalendarCell(day,
+                  isSelected: true,
+                  isToday: isSameDay(day, DateTime.now()),
                 );
               },
             ),
             calendarStyle: CalendarStyle(
               outsideDaysVisible: false,
+              cellMargin: const EdgeInsets.all(1),
               defaultTextStyle: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
