@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,7 +17,7 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   Box baringBox = Hive.box("baring");
 
   String userName = '바링';
@@ -24,9 +26,6 @@ class _ProfilePageState extends State<ProfilePage> {
       TextEditingController(); // 컨트롤러 추가 ⭐
   bool isEditingName = false; // 수정 모드 여부 ⭐
 
-  bool ddayAlerts = true;
-  bool progressAlerts = true;
-  bool achievementPush = false;
 
   bool morningTodoAlert = false;
   bool eveningTodoAlert = false;
@@ -36,6 +35,12 @@ class _ProfilePageState extends State<ProfilePage> {
   int bottomIndex = 1;
   String? profileImagePath; // 프로필 이미지 경로 추가 ⭐
   final ImagePicker _picker = ImagePicker(); // 이미지 피커 추가 ⭐
+
+  // 권한 상태
+  bool? permCamera;
+  bool? permNotification;
+
+  static const _settingsChannel = MethodChannel('com.baring/settings');
 
   void _loadUserName() {
     final savedName = baringBox.get("userName");
@@ -498,11 +503,60 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+
+  Future<void> _openAppSettings() async {
+    try {
+      await _settingsChannel.invokeMethod('openAppSettings');
+    } catch (e) {
+      debugPrint('설정 열기 오류: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              '설정 > 앱 > 바링 > 권한에서 캘린더를 허용해주세요',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFFFF9800),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _checkPermissions() async {
+    try {
+      final result = await _settingsChannel.invokeMethod('checkPermissions');
+      if (result != null && mounted) {
+        setState(() {
+          permCamera = result['camera'] as bool?;
+          permNotification = result['notification'] as bool?;
+        });
+      }
+    } catch (e) {
+      debugPrint('권한 확인 오류: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUserName(); // ← 여기서 호출! ⭐
     _loadUserData(); // 함수 이름 수정 ⭐
+    _checkPermissions();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissions();
+    }
   }
 
   void _loadUserData() {
@@ -637,8 +691,95 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _nameController.dispose(); // 메모리 해제 ⭐
     super.dispose();
+  }
+
+  Widget _buildPermissionRow({
+    required IconData icon,
+    required String title,
+    required String desc,
+    required bool? granted,
+  }) {
+    final bool isGranted = granted == true;
+    final Color badgeColor = granted == null
+        ? const Color(0xFF64748B)
+        : isGranted
+            ? const Color(0xFF22C55E)
+            : const Color(0xFFEF4444);
+    final String badgeText = granted == null ? '확인중' : isGranted ? '허용' : '거부';
+
+    return GestureDetector(
+      onTap: _openAppSettings,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2F80ED).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: const Color(0xFF2F80ED), size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    desc,
+                    style: TextStyle(
+                      color: const Color(0xFF7B8DA0),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: badgeColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badgeText,
+                style: TextStyle(
+                  color: badgeColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white.withValues(alpha: 0.3),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -1010,79 +1151,33 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 const SizedBox(height: 22),
 
-                // ---------- SECTION: NOTIFICATION PREFERENCES ----------
-                Row(
-                  children: [
-                    Text(
-                      '알림 설정',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.60),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.4,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F2538),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.06),
-                        ),
-                      ),
-                      child: const Text(
-                        '준비중...',
-                        style: TextStyle(
-                          color: Color(0xFF2D86FF),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
+                // ---------- SECTION: PERMISSION SETTINGS ----------
+                Text(
+                  '권한 설정',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.60),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  ),
                 ),
-
                 const SizedBox(height: 10),
 
                 _CardBox(
                   child: Column(
                     children: [
-                      _SwitchRow(
-                        title: 'D-Day 알림',
-                        desc: '현재 진행중인 목표를 매일 알려줘요',
-                        // value: ddayAlerts,
-                        value: false,
-                        onChanged: (v) => setState(() => ddayAlerts = v),
-                        primary: primary,
-                        subtle: subtle,
-                        line: line,
+                      _buildPermissionRow(
+                        icon: Icons.camera_alt_rounded,
+                        title: '사진',
+                        desc: '프로필 사진 촬영 및 갤러리 접근',
+                        granted: permCamera,
                       ),
-                      const SizedBox(height: 6),
-                      _SwitchRow(
-                        title: '목표 진행률 알림',
-                        desc: '25%, 50%, 75%, 100% 달성 시 알려줘요.',
-                        // value: progressAlerts,
-                        value: false,
-                        onChanged: (v) => setState(() => progressAlerts = v),
-                        primary: primary,
-                        subtle: subtle,
-                        line: line,
-                      ),
-                      const SizedBox(height: 6),
-                      _SwitchRow(
-                        title: '목표 달성 알림',
-                        desc: '목표를 달성하면 축하 알림을 보내줘요.',
-                        // value: achievementPush,
-                        value: false,
-                        onChanged: (v) => setState(() => achievementPush = v),
-                        primary: primary,
-                        subtle: subtle,
-                        line: line,
+                      const SizedBox(height: 8),
+                      _buildPermissionRow(
+                        icon: Icons.notifications_rounded,
+                        title: '알림',
+                        desc: '할일 알림 및 일정 알림',
+                        granted: permNotification,
                       ),
                     ],
                   ),

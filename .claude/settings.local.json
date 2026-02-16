@@ -6,7 +6,11 @@
       "Bash(find:*)",
       "Bash(findstr:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(flutter pub get:*)"
+      "Bash(flutter pub get:*)",
+      "WebSearch",
+      "Bash(flutter pub add:*)",
+      "Bash(flutter pub deps:*)",
+      "Bash(del \"C:\\\\Users\\\\PC\\\\Desktop\\\\baring_window\\\\lib\\\\services\\\\calendar_service.dart\")"
     ]
   }
 }

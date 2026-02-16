@@ -71,12 +71,13 @@ class _TodoPageState extends State<TodoPage> {
     return _todos[_dayKey(day)] ?? [];
   }
 
-  void _addTodo(String title, {String? time, int? notifyBefore}) {
+  void _addTodo(String title, {String? time, int? notifyBefore}) async {
     final key = _dayKey(_selectedDay);
     _todos.putIfAbsent(key, () => []);
     final todo = <String, dynamic>{'title': title, 'done': false};
     if (time != null) todo['time'] = time;
     if (notifyBefore != null) todo['notifyBefore'] = notifyBefore;
+
     _todos[key]!.add(todo);
     _saveTodos();
     setState(() {});
@@ -89,7 +90,7 @@ class _TodoPageState extends State<TodoPage> {
     }
   }
 
-  void _editTodo(int index, String title, {String? time, int? notifyBefore}) {
+  void _editTodo(int index, String title, {String? time, int? notifyBefore}) async {
     final key = _dayKey(_selectedDay);
     if (_todos[key] == null || index >= _todos[key]!.length) return;
 
@@ -425,7 +426,7 @@ class _TodoPageState extends State<TodoPage> {
     List<int>? days,
     String? time,
     int? notifyBefore,
-  }) {
+  }) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final routine = <String, dynamic>{
       'id': id,
@@ -436,6 +437,7 @@ class _TodoPageState extends State<TodoPage> {
     if (type == 'weekly' && days != null) routine['days'] = days;
     if (time != null) routine['time'] = time;
     if (notifyBefore != null) routine['notifyBefore'] = notifyBefore;
+
     _routines.add(routine);
     _saveRoutines();
     setState(() {});
@@ -452,7 +454,7 @@ class _TodoPageState extends State<TodoPage> {
     List<int>? days,
     String? time,
     int? notifyBefore,
-  }) {
+  }) async {
     final routinesForDay = _getRoutinesForDay(_selectedDay);
     if (routineIndex >= routinesForDay.length) return;
 
@@ -2404,7 +2406,10 @@ class _TodoPageState extends State<TodoPage> {
           ),
         ],
       ),
-      body: Column(
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: SingleChildScrollView(
+        child: Column(
         children: [
           // Calendar
           TableCalendar(
@@ -2518,6 +2523,8 @@ class _TodoPageState extends State<TodoPage> {
             ),
           ),
         ],
+      ),
+      ),
       ),
     );
   }
