@@ -19,8 +19,69 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   Box baringBox = Hive.box("baring");
+
+  late AnimationController _analysisAnimController;
+  double _analysisFrom = 0.0;
+  double _analysisTarget = 0.0;
+
+  double get _analysisAnimValue {
+    final t = Curves.easeOutCubic.transform(_analysisAnimController.value);
+    return _analysisFrom + (_analysisTarget - _analysisFrom) * t;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _analysisAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    final data = _todayCompletion();
+    final total = data['total']!;
+    final completed = data['completed']!;
+    _analysisFrom = 0.0;
+    _analysisTarget = total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0;
+    _analysisAnimController.forward();
+  }
+
+  @override
+  void dispose() {
+    _analysisAnimController.dispose();
+    super.dispose();
+  }
+
+  // ── 오늘 진행도 계산 (할일 + 루틴) ──
+  Map<String, int> _todayCompletion() {
+    int completed = 0;
+    int total = 0;
+
+    // 할일
+    final todos = _getTodayTodos();
+    total += todos.length;
+    completed += todos.where((t) => t['done'] == true).length;
+
+    // 루틴
+    final routines = _getTodayRoutines();
+    total += routines.length;
+    completed += routines.where((r) => _isRoutineCompletedToday(r)).length;
+
+    return {'completed': completed, 'total': total};
+  }
+
+  void _refreshAnalysisAnim() {
+    final data = _todayCompletion();
+    final total = data['total']!;
+    final completed = data['completed']!;
+    _analysisFrom = _analysisAnimValue;
+    _analysisTarget = total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0;
+    _analysisAnimController
+      ..reset()
+      ..forward();
+  }
+
   // 계산 함수들 추가
   int _calculateDays(DateTime targetDate) {
     final now = DateTime.now();
@@ -97,6 +158,7 @@ class _HomePageState extends State<HomePage> {
 
     baringBox.put('routines', allRoutines);
     setState(() {});
+    _refreshAnalysisAnim();
     WidgetService.syncWidget();
   }
 
@@ -161,6 +223,7 @@ class _HomePageState extends State<HomePage> {
     data[_todayKey] = todos;
     baringBox.put('todos', data);
     setState(() {});
+    _refreshAnalysisAnim();
     WidgetService.syncWidget();
   }
 
@@ -281,6 +344,7 @@ class _HomePageState extends State<HomePage> {
     data[_todayKey] = todos;
     baringBox.put('todos', data);
     setState(() {});
+    _refreshAnalysisAnim();
     WidgetService.syncWidget();
 
     if (time != null && notifyBefore != null) {
@@ -308,6 +372,7 @@ class _HomePageState extends State<HomePage> {
     data[_todayKey] = todos;
     baringBox.put('todos', data);
     setState(() {});
+    _refreshAnalysisAnim();
     WidgetService.syncWidget();
 
     if (time != null && notifyBefore != null) {
@@ -346,6 +411,7 @@ class _HomePageState extends State<HomePage> {
 
     baringBox.put('routines', allRoutines);
     setState(() {});
+    _refreshAnalysisAnim();
     WidgetService.syncWidget();
   }
 
@@ -399,6 +465,7 @@ class _HomePageState extends State<HomePage> {
     final removed = allRoutines.removeAt(globalIndex);
     baringBox.put('routines', allRoutines);
     setState(() {});
+    _refreshAnalysisAnim();
     WidgetService.syncWidget();
 
     final c = context.colors;
@@ -424,6 +491,7 @@ class _HomePageState extends State<HomePage> {
             list.insert(globalIndex.clamp(0, list.length), removed);
             baringBox.put('routines', list);
             setState(() {});
+            _refreshAnalysisAnim();
             WidgetService.syncWidget();
           },
         ),
@@ -480,6 +548,7 @@ class _HomePageState extends State<HomePage> {
     data[_todayKey] = todos;
     baringBox.put('todos', data);
     setState(() {});
+    _refreshAnalysisAnim();
     WidgetService.syncWidget();
 
     final c = context.colors;
@@ -508,6 +577,7 @@ class _HomePageState extends State<HomePage> {
             data[_todayKey] = todos;
             baringBox.put('todos', data);
             setState(() {});
+            _refreshAnalysisAnim();
             WidgetService.syncWidget();
 
             if (removed['time'] != null && removed['notifyBefore'] != null) {
@@ -1493,91 +1563,104 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
 
               // 목표 카드 상황
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      // height: 140,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: c.analysisBg,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: c.borderColor,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Column(
-                              children: [
-                                SizedBox(height: 10),
-                                SizedBox(
-                                  height: 64,
-                                  width: 64,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      SizedBox(
-                                        height: 64,
-                                        width: 64,
-                                        child: CircularProgressIndicator(
-                                          value: 1,
-                                          strokeWidth: 7,
-                                          valueColor: AlwaysStoppedAnimation(
-                                            c.textPrimary.withOpacity(0.10),
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        height: 64,
-                                        width: 64,
-                                        child: CircularProgressIndicator(
-                                          value: 0.45,
-                                          strokeWidth: 7,
-                                          valueColor: AlwaysStoppedAnimation(
-                                            Color(0xFF22C55E),
-                                          ),
-                                          backgroundColor: Colors.transparent,
-                                        ),
-                                      ),
-                                      Text(
-                                        "45%",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  "진행도",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "24/28",
-                                  style: TextStyle(
-                                    color: c.textPrimary.withOpacity(0.55),
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12,
-                                    letterSpacing: 0.4,
-                                  ),
-                                ),
-                              ],
+              Builder(
+                builder: (context) {
+                  final data = _todayCompletion();
+                  final total = data['total']!;
+                  final completed = data['completed']!;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: c.analysisBg,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: c.borderColor,
                             ),
                           ),
-                        ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Center(
+                                child: Column(
+                                  children: [
+                                    SizedBox(height: 10),
+                                    AnimatedBuilder(
+                                      animation: _analysisAnimController,
+                                      builder: (context, child) {
+                                        final animValue = _analysisAnimValue;
+                                        final animPercent = (animValue * 100).round();
+                                        return SizedBox(
+                                          height: 64,
+                                          width: 64,
+                                          child: Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              SizedBox(
+                                                height: 64,
+                                                width: 64,
+                                                child: CircularProgressIndicator(
+                                                  value: 1,
+                                                  strokeWidth: 7,
+                                                  valueColor: AlwaysStoppedAnimation(
+                                                    c.textPrimary.withOpacity(0.10),
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                height: 64,
+                                                width: 64,
+                                                child: CircularProgressIndicator(
+                                                  value: animValue,
+                                                  strokeWidth: 7,
+                                                  valueColor: AlwaysStoppedAnimation(
+                                                    Color(0xFF22C55E),
+                                                  ),
+                                                  backgroundColor: Colors.transparent,
+                                                ),
+                                              ),
+                                              Text(
+                                                "$animPercent%",
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      "오늘 진행도",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "$completed/$total",
+                                      style: TextStyle(
+                                        color: c.textPrimary.withOpacity(0.55),
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
             ],
           ),
