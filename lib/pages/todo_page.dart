@@ -145,6 +145,10 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _toggleTodo(int index) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (_selectedDay.isBefore(today)) return;
+
     final key = _dayKey(_selectedDay);
     if (_todos[key] == null || index >= _todos[key]!.length) return;
 
@@ -494,6 +498,10 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _toggleRoutine(int routineIndex) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (_selectedDay.isBefore(today)) return;
+
     final routinesForDay = _getRoutinesForDay(_selectedDay);
     if (routineIndex >= routinesForDay.length) return;
 
@@ -1908,6 +1916,10 @@ class _TodoPageState extends State<TodoPage> {
           builder: (context, setSheetState) {
             _sheetStateSetter = setSheetState;
 
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final isPast = _selectedDay.isBefore(today);
+
             final todosForDay = _getTodosForDay(_selectedDay);
             final routinesForDay = _getRoutinesForDay(_selectedDay);
             final routineDoneCount = routinesForDay
@@ -2019,7 +2031,7 @@ class _TodoPageState extends State<TodoPage> {
                                 key: ValueKey(routine['id']),
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: GestureDetector(
-                                  onTap: () => _showEditRoutineDialog(i),
+                                  onTap: isPast ? null : () => _showEditRoutineDialog(i),
                                   child: Container(
                                     padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
                                     decoration: BoxDecoration(
@@ -2051,22 +2063,18 @@ class _TodoPageState extends State<TodoPage> {
                                                 decoration: BoxDecoration(
                                                   color: isDone
                                                       ? c.primary
-                                                      : Colors.transparent,
+                                                      : (isPast ? c.textPrimary.withOpacity(0.08) : Colors.transparent),
                                                   borderRadius: BorderRadius.circular(8),
                                                   border: Border.all(
                                                     color: isDone
                                                         ? Colors.transparent
-                                                        : c.textPrimary.withOpacity(0.18),
+                                                        : (isPast ? c.textPrimary.withOpacity(0.10) : c.textPrimary.withOpacity(0.18)),
                                                     width: 1.6,
                                                   ),
                                                 ),
                                                 child: isDone
-                                                    ? const Icon(
-                                                        Icons.check,
-                                                        size: 18,
-                                                        color: Colors.white,
-                                                      )
-                                                    : null,
+                                                    ? const Icon(Icons.check, size: 18, color: Colors.white)
+                                                    : (isPast ? Icon(Icons.block, size: 14, color: c.textPrimary.withOpacity(0.15)) : null),
                                               ),
                                             ],
                                           ),
@@ -2106,7 +2114,7 @@ class _TodoPageState extends State<TodoPage> {
                                           ),
                                         ),
                                         IconButton(
-                                          onPressed: () => _deleteRoutine(i),
+                                          onPressed: isPast ? null : () => _deleteRoutine(i),
                                           icon: Icon(
                                             Icons.close,
                                             size: 18,
@@ -2169,7 +2177,7 @@ class _TodoPageState extends State<TodoPage> {
                                 ),
                               const Spacer(),
                               IconButton(
-                                onPressed: _showAddDialog,
+                                onPressed: isPast ? null : _showAddDialog,
                                 icon: Icon(
                                   Icons.add,
                                   color: c.primary,
@@ -2226,7 +2234,7 @@ class _TodoPageState extends State<TodoPage> {
                                 key: ValueKey('todo_${todo['title']}_$index'),
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: GestureDetector(
-                                  onTap: () => _showEditTodoDialog(index),
+                                  onTap: isPast ? null : () => _showEditTodoDialog(index),
                                   child: Container(
                                     padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
                                     decoration: BoxDecoration(
@@ -2247,22 +2255,18 @@ class _TodoPageState extends State<TodoPage> {
                                             decoration: BoxDecoration(
                                               color: isDone
                                                   ? c.primary
-                                                  : Colors.transparent,
+                                                  : (isPast ? c.textPrimary.withOpacity(0.08) : Colors.transparent),
                                               borderRadius: BorderRadius.circular(8),
                                               border: Border.all(
                                                 color: isDone
                                                     ? Colors.transparent
-                                                    : c.textPrimary.withOpacity(0.18),
+                                                    : (isPast ? c.textPrimary.withOpacity(0.10) : c.textPrimary.withOpacity(0.18)),
                                                 width: 1.6,
                                               ),
                                             ),
                                             child: isDone
-                                                ? const Icon(
-                                                    Icons.check,
-                                                    size: 18,
-                                                    color: Colors.white,
-                                                  )
-                                                : null,
+                                                ? const Icon(Icons.check, size: 18, color: Colors.white)
+                                                : (isPast ? Icon(Icons.block, size: 14, color: c.textPrimary.withOpacity(0.15)) : null),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -2337,7 +2341,7 @@ class _TodoPageState extends State<TodoPage> {
                                           ),
                                         ),
                                         IconButton(
-                                          onPressed: () => _deleteTodo(index),
+                                          onPressed: isPast ? null : () => _deleteTodo(index),
                                           icon: Icon(
                                             Icons.close,
                                             size: 18,
