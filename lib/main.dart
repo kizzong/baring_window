@@ -5,6 +5,7 @@ import 'package:baring_windows/onboarding/onboarding_page.dart';
 import 'package:baring_windows/services/widget_service.dart';
 import 'package:baring_windows/pages/home_page.dart';
 import 'package:baring_windows/pages/todo_page.dart';
+import 'package:baring_windows/pages/analysis_page.dart';
 import 'package:baring_windows/pages/profile_page.dart';
 // import 'package:baring_windows/pages/dday_settings_page.dart';
 import 'package:baring_windows/services/notification_service.dart';
@@ -94,16 +95,25 @@ class MainAppScreen extends StatefulWidget {
   const MainAppScreen({super.key});
 
   @override
-  State<MainAppScreen> createState() => _MainAppScreenState();
+  State<MainAppScreen> createState() => MainAppScreenState();
 }
 
-class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserver {
+class MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+
+  void navigateToTab(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
 
   final List<Widget> _pages = [
     const HomePage(),
     const TodoPage(),
+    const AnalysisPage(),
     const ProfilePage(),
   ];
 
@@ -146,6 +156,7 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
       ),
 
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         backgroundColor: c.bottomNavBg,
         selectedItemColor: c.textPrimary,
         unselectedItemColor: c.textSecondary,
@@ -156,6 +167,7 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
             icon: Icon(Icons.calendar_month),
             label: "",
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: ""),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
         ],
         onTap: (index) {

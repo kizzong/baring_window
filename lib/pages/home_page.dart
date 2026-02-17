@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:baring_windows/main.dart';
 import 'package:baring_windows/pages/dday_settings_page.dart';
 import 'package:baring_windows/services/notification_service.dart';
 import 'package:baring_windows/services/widget_service.dart';
@@ -1473,28 +1474,12 @@ class _HomePageState extends State<HomePage> {
                     '분석',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                   ),
-                  SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: c.chipBg,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: c.borderColor),
-                    ),
-                    child: Text(
-                      '준비중...',
-                      style: TextStyle(
-                        color: c.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
                   const Spacer(),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      context.findAncestorStateOfType<MainAppScreenState>()
+                          ?.navigateToTab(2);
+                    },
                     child: Text(
                       '자세히',
                       style: TextStyle(
