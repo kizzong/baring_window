@@ -500,6 +500,7 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
                   '${summary['thisWeekCompleted']}/${summary['thisWeekTotal']}',
                   subtitle: '전주 대비 $changeText',
                   subtitleColor: changeColor,
+                  onTap: () => _showThisWeekDetail(c, summary),
                 ),
               ),
               const SizedBox(width: 12),
@@ -508,6 +509,7 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
                   c,
                   '이번 달',
                   '${summary['monthCompleted']}/${summary['monthTotal']}',
+                  onTap: () => _showThisMonthDetail(c, summary),
                 ),
               ),
             ],
@@ -525,6 +527,7 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
                   summary['bestRoutine'] as String,
                   icon: Icons.emoji_events,
                   iconColor: const Color(0xFFFBBF24),
+                  onTap: () => _showRoutineDetail(c, summary['bestRoutine'] as String, isBest: true),
                 ),
               ),
               const SizedBox(width: 12),
@@ -535,6 +538,7 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
                   summary['worstRoutine'] as String,
                   icon: Icons.trending_down,
                   iconColor: const Color(0xFFEF4444),
+                  onTap: () => _showRoutineDetail(c, summary['worstRoutine'] as String, isBest: false),
                 ),
               ),
             ],
@@ -552,57 +556,1020 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
     Color? subtitleColor,
     IconData? icon,
     Color? iconColor,
+    VoidCallback? onTap,
   }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: c.cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 16, color: iconColor ?? c.primary),
+                  const SizedBox(width: 4),
+                ],
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: c.textSecondary,
+                    ),
+                  ),
+                ),
+                if (onTap != null)
+                  Icon(Icons.chevron_right, size: 16, color: c.subtle),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: c.textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: subtitleColor ?? c.textSecondary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 상세 분석 바텀시트 ──
+
+  void _showDetailSheet({
+    required AppColors c,
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required List<Widget> children,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: c.cardBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.subtle.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 22, color: iconColor),
+                    const SizedBox(width: 10),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Icon(Icons.close, size: 22, color: c.subtle),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Divider(color: c.borderColor, height: 1),
+              Expanded(
+                child: ListView(
+                  controller: controller,
+                  padding: const EdgeInsets.all(20),
+                  children: children,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── 이번 주 상세 ──
+
+  void _showThisWeekDetail(AppColors c, Map<String, dynamic> summary) {
+    final todos = _getAllTodos();
+    final routines = _getAllRoutines();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final thisWeek = _weekDays(today);
+    final lastWeekAnchor = today.subtract(const Duration(days: 7));
+    final lastWeek = _weekDays(lastWeekAnchor);
+    const dayLabels = ['월', '화', '수', '목', '금', '토', '일'];
+
+    final List<Map<String, dynamic>> dailyData = [];
+    int bestIdx = -1;
+    double bestRate = -1;
+    int worstIdx = -1;
+    double worstRate = 2;
+
+    for (int i = 0; i < 7; i++) {
+      final d = thisWeek[i];
+      final isPast = !d.isAfter(today);
+      final isToday = _dateKey(d) == _dateKey(today);
+
+      if (isPast) {
+        final completed = _completedCountForDay(d, todos, routines);
+        final total = _totalCountForDay(d, todos, routines);
+        final rate = total > 0 ? completed / total : 0.0;
+        dailyData.add({
+          'label': dayLabels[i],
+          'completed': completed,
+          'total': total,
+          'rate': rate,
+          'isToday': isToday,
+          'isPast': true,
+        });
+        if (total > 0) {
+          if (rate > bestRate) { bestRate = rate; bestIdx = i; }
+          if (rate < worstRate) { worstRate = rate; worstIdx = i; }
+        }
+      } else {
+        dailyData.add({
+          'label': dayLabels[i],
+          'completed': 0,
+          'total': 0,
+          'rate': 0.0,
+          'isToday': false,
+          'isPast': false,
+        });
+      }
+    }
+
+    int lastWeekCompleted = 0;
+    int lastWeekTotal = 0;
+    for (final d in lastWeek) {
+      lastWeekCompleted += _completedCountForDay(d, todos, routines);
+      lastWeekTotal += _totalCountForDay(d, todos, routines);
+    }
+
+    final thisWeekCompleted = summary['thisWeekCompleted'] as int;
+    final thisWeekTotal = summary['thisWeekTotal'] as int;
+    final thisRate = thisWeekTotal > 0 ? (thisWeekCompleted / thisWeekTotal * 100).round() : 0;
+    final lastRate = lastWeekTotal > 0 ? (lastWeekCompleted / lastWeekTotal * 100).round() : 0;
+    final change = summary['changePercent'] as int;
+
+    _showDetailSheet(
+      c: c,
+      title: '이번 주 상세',
+      icon: Icons.calendar_today,
+      iconColor: c.primary,
+      children: [
+        _buildDetailStats(c, [
+          {'label': '완료율', 'value': '$thisRate%', 'color': thisRate >= 70 ? const Color(0xFF22C55E) : thisRate >= 40 ? const Color(0xFFFBBF24) : const Color(0xFFEF4444)},
+          {'label': '완료', 'value': '$thisWeekCompleted/$thisWeekTotal', 'color': c.primary},
+          {'label': '전주 대비', 'value': '${change > 0 ? "+" : ""}$change%', 'color': change > 0 ? const Color(0xFF22C55E) : change < 0 ? const Color(0xFFEF4444) : c.textSecondary},
+        ]),
+        const SizedBox(height: 24),
+        _buildDetailLabel(c, '주간 비교'),
+        const SizedBox(height: 12),
+        _buildComparisonRow(c, '지난 주', lastWeekCompleted, lastWeekTotal, lastRate.toDouble()),
+        const SizedBox(height: 10),
+        _buildComparisonRow(c, '이번 주', thisWeekCompleted, thisWeekTotal, thisRate.toDouble()),
+        const SizedBox(height: 24),
+        _buildDetailLabel(c, '요일별 현황'),
+        const SizedBox(height: 12),
+        ...dailyData.asMap().entries.map((entry) {
+          final i = entry.key;
+          final d = entry.value;
+          return _buildDayRow(c, d,
+            isBest: i == bestIdx,
+            isWorst: i == worstIdx && bestIdx != worstIdx,
+          );
+        }),
+        if (bestIdx >= 0) ...[
+          const SizedBox(height: 16),
+          _buildDetailInsight(c, _weekInsight(dailyData, bestIdx, worstIdx, change)),
+        ],
+      ],
+    );
+  }
+
+  String _weekInsight(List<Map<String, dynamic>> dailyData, int bestIdx, int worstIdx, int change) {
+    final buf = StringBuffer();
+    final best = dailyData[bestIdx];
+    buf.write('${best['label']}요일의 완료율이 ${((best['rate'] as double) * 100).round()}%로 가장 높았어요.');
+    if (worstIdx >= 0 && bestIdx != worstIdx) {
+      final worst = dailyData[worstIdx];
+      buf.write(' ${worst['label']}요일은 ${((worst['rate'] as double) * 100).round()}%로 가장 낮았어요.');
+    }
+    if (change > 0) {
+      buf.write('\n지난 주보다 완료율이 $change% 올랐어요!');
+    } else if (change < 0) {
+      buf.write('\n지난 주보다 완료율이 ${change.abs()}% 내려갔어요. 화이팅!');
+    }
+    return buf.toString();
+  }
+
+  // ── 이번 달 상세 ──
+
+  void _showThisMonthDetail(AppColors c, Map<String, dynamic> summary) {
+    final todos = _getAllTodos();
+    final routines = _getAllRoutines();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final monthCompleted = summary['monthCompleted'] as int;
+    final monthTotal = summary['monthTotal'] as int;
+    final monthRate = monthTotal > 0 ? (monthCompleted / monthTotal * 100).round() : 0;
+
+    final lastDay = DateTime(today.year, today.month + 1, 0).day;
+    final weekCount = ((lastDay - 1) ~/ 7) + 1;
+    final List<Map<String, dynamic>> weeklyData = [];
+    int bestWeek = -1;
+    double bestWeekRate = -1;
+
+    for (int w = 0; w < weekCount; w++) {
+      final weekStart = DateTime(today.year, today.month, 1 + w * 7);
+      int completed = 0;
+      int total = 0;
+      for (int d = 0; d < 7; d++) {
+        final day = weekStart.add(Duration(days: d));
+        if (day.month != today.month) continue;
+        if (day.isAfter(today)) continue;
+        completed += _completedCountForDay(day, todos, routines);
+        total += _totalCountForDay(day, todos, routines);
+      }
+      final rate = total > 0 ? completed / total : 0.0;
+      if (total > 0 && rate > bestWeekRate) {
+        bestWeekRate = rate;
+        bestWeek = w;
+      }
+      weeklyData.add({
+        'label': '${w + 1}주차',
+        'completed': completed,
+        'total': total,
+        'rate': rate,
+      });
+    }
+
+    final monthDays = _monthDays(today);
+    final List<Map<String, dynamic>> dayDots = [];
+    for (final d in monthDays) {
+      if (d.isAfter(today)) break;
+      final completed = _completedCountForDay(d, todos, routines);
+      final total = _totalCountForDay(d, todos, routines);
+      dayDots.add({
+        'day': d.day,
+        'completed': completed,
+        'total': total,
+        'rate': total > 0 ? completed / total : 0.0,
+        'isToday': _dateKey(d) == _dateKey(today),
+      });
+    }
+
+    _showDetailSheet(
+      c: c,
+      title: '이번 달 상세',
+      icon: Icons.date_range,
+      iconColor: c.primary,
+      children: [
+        _buildDetailStats(c, [
+          {'label': '완료율', 'value': '$monthRate%', 'color': monthRate >= 70 ? const Color(0xFF22C55E) : monthRate >= 40 ? const Color(0xFFFBBF24) : const Color(0xFFEF4444)},
+          {'label': '완료', 'value': '$monthCompleted/$monthTotal', 'color': c.primary},
+          {'label': '경과일', 'value': '${dayDots.length}일', 'color': c.textSecondary},
+        ]),
+        const SizedBox(height: 24),
+        _buildDetailLabel(c, '주별 현황'),
+        const SizedBox(height: 12),
+        ...weeklyData.asMap().entries.map((entry) {
+          return _buildWeekRow(c, entry.value, isBest: entry.key == bestWeek);
+        }),
+        const SizedBox(height: 24),
+        _buildDetailLabel(c, '일별 완료 현황'),
+        const SizedBox(height: 12),
+        _buildDayDotsGrid(c, dayDots),
+        const SizedBox(height: 12),
+        _buildDotLegend(c),
+        if (bestWeek >= 0) ...[
+          const SizedBox(height: 16),
+          _buildDetailInsight(c, '${bestWeek + 1}주차의 완료율이 ${(bestWeekRate * 100).round()}%로 가장 높았어요. ${monthRate >= 70 ? '이번 달 완료율이 높아요! 잘하고 있어요.' : monthRate >= 40 ? '꾸준히 하고 있어요. 조금만 더 힘내봐요!' : '조금 더 노력해봐요! 작은 것부터 시작해보세요.'}'),
+        ],
+      ],
+    );
+  }
+
+  // ── 루틴 상세 (베스트/워스트 공용) ──
+
+  void _showRoutineDetail(AppColors c, String routineTitle, {required bool isBest}) {
+    if (routineTitle == '-') {
+      _showDetailSheet(
+        c: c,
+        title: isBest ? '베스트 루틴' : '워스트 루틴',
+        icon: isBest ? Icons.emoji_events : Icons.trending_down,
+        iconColor: isBest ? const Color(0xFFFBBF24) : const Color(0xFFEF4444),
+        children: [
+          SizedBox(
+            height: 200,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isBest ? Icons.emoji_events : Icons.trending_down,
+                    size: 48,
+                    color: c.subtle.withOpacity(0.4),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    isBest ? '아직 베스트 루틴이 없어요' : '아직 워스트 루틴이 없어요',
+                    style: TextStyle(color: c.textSecondary, fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isBest ? '완료율 60% 이상인 루틴이 있으면 표시돼요' : '완료율 35% 미만인 루틴이 있으면 표시돼요',
+                    style: TextStyle(color: c.subtle, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+      return;
+    }
+
+    final routines = _getAllRoutines();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final routine = routines.firstWhere(
+      (r) => r['title'] == routineTitle,
+      orElse: () => <String, dynamic>{},
+    );
+    if (routine.isEmpty) return;
+
+    int activeDays = 0;
+    int completedDays = 0;
+    final List<Map<String, dynamic>> dayHistory = [];
+    final last30 = List.generate(30, (i) => today.subtract(Duration(days: i)));
+
+    for (final d in last30.reversed) {
+      final weekday = d.weekday;
+      final isActive = routine['type'] == 'daily' ||
+          (routine['type'] == 'weekly' && (List<int>.from(routine['days'] ?? [])).contains(weekday));
+      if (!isActive) {
+        dayHistory.add({'date': d, 'active': false, 'done': false});
+        continue;
+      }
+      activeDays++;
+      final completions = Map<String, dynamic>.from(routine['completions'] ?? {});
+      final done = completions[_dateKey(d)] == true;
+      if (done) completedDays++;
+      dayHistory.add({'date': d, 'active': true, 'done': done});
+    }
+
+    final rate = activeDays > 0 ? (completedDays / activeDays * 100).round() : 0;
+
+    // 스트릭 계산
+    int currentStreak = 0;
+    int maxStreak = 0;
+    int streak = 0;
+    for (int i = 0; i < 365; i++) {
+      final d = today.subtract(Duration(days: i));
+      final weekday = d.weekday;
+      final isActive = routine['type'] == 'daily' ||
+          (routine['type'] == 'weekly' && (List<int>.from(routine['days'] ?? [])).contains(weekday));
+      if (!isActive) continue;
+      final completions = Map<String, dynamic>.from(routine['completions'] ?? {});
+      if (completions[_dateKey(d)] == true) {
+        streak++;
+        if (i == 0 || currentStreak > 0) currentStreak = streak;
+        if (streak > maxStreak) maxStreak = streak;
+      } else {
+        if (i == 0) currentStreak = 0;
+        streak = 0;
+      }
+    }
+
+    // 활성 요일
+    String activeDaysText;
+    if (routine['type'] == 'daily') {
+      activeDaysText = '매일';
+    } else {
+      const dayNames = ['', '월', '화', '수', '목', '금', '토', '일'];
+      final days = List<int>.from(routine['days'] ?? []);
+      days.sort();
+      activeDaysText = days.map((d) => '${dayNames[d]}요일').join(', ');
+    }
+
+    // 최근 4주 주별 달성률
+    final List<Map<String, dynamic>> weeklyTrend = [];
+    for (int w = 0; w < 4; w++) {
+      int wActive = 0;
+      int wDone = 0;
+      for (int d = 0; d < 7; d++) {
+        final day = today.subtract(Duration(days: w * 7 + (6 - d)));
+        final weekday = day.weekday;
+        final isActive = routine['type'] == 'daily' ||
+            (routine['type'] == 'weekly' && (List<int>.from(routine['days'] ?? [])).contains(weekday));
+        if (!isActive) continue;
+        wActive++;
+        final completions = Map<String, dynamic>.from(routine['completions'] ?? {});
+        if (completions[_dateKey(day)] == true) wDone++;
+      }
+      weeklyTrend.add({
+        'label': w == 0 ? '이번 주' : '$w주 전',
+        'done': wDone,
+        'active': wActive,
+        'rate': wActive > 0 ? wDone / wActive : 0.0,
+      });
+    }
+
+    _showDetailSheet(
+      c: c,
+      title: isBest ? '베스트 루틴' : '워스트 루틴',
+      icon: isBest ? Icons.emoji_events : Icons.trending_down,
+      iconColor: isBest ? const Color(0xFFFBBF24) : const Color(0xFFEF4444),
+      children: [
+        // 루틴 이름 헤더
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: c.analysisBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: c.borderColor),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                isBest ? Icons.emoji_events : Icons.trending_down,
+                size: 36,
+                color: isBest ? const Color(0xFFFBBF24) : const Color(0xFFEF4444),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                routineTitle,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: c.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(activeDaysText, style: TextStyle(fontSize: 13, color: c.textSecondary)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 핵심 통계
+        _buildDetailStats(c, [
+          {'label': '달성률', 'value': '$rate%', 'color': rate >= 80 ? const Color(0xFF22C55E) : rate >= 50 ? const Color(0xFFFBBF24) : const Color(0xFFEF4444)},
+          {'label': '완료', 'value': '$completedDays/$activeDays', 'color': c.primary},
+          {'label': '연속', 'value': '${currentStreak}일', 'color': currentStreak > 0 ? const Color(0xFFF97316) : c.textSecondary},
+        ]),
+        const SizedBox(height: 24),
+
+        // 연속 기록
+        _buildDetailLabel(c, '연속 기록'),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: c.scaffoldBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Icon(Icons.local_fire_department,
+                      size: 28,
+                      color: currentStreak > 0 ? const Color(0xFFF97316) : c.subtle,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${currentStreak}일',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: currentStreak > 0 ? const Color(0xFFF97316) : c.textSecondary,
+                      ),
+                    ),
+                    Text('현재 연속', style: TextStyle(fontSize: 12, color: c.textSecondary)),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 50, color: c.borderColor),
+              Expanded(
+                child: Column(
+                  children: [
+                    Icon(Icons.military_tech, size: 28, color: const Color(0xFFFBBF24)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${maxStreak}일',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                    Text('최대 연속', style: TextStyle(fontSize: 12, color: c.textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // 주별 추이
+        _buildDetailLabel(c, '주별 추이'),
+        const SizedBox(height: 12),
+        ...weeklyTrend.reversed.map((w) {
+          final wRate = w['rate'] as double;
+          return _buildComparisonRow(
+            c,
+            w['label'] as String,
+            w['done'] as int,
+            w['active'] as int,
+            w['active'] > 0 ? (wRate * 100) : 0,
+          );
+        }).expand((widget) sync* {
+          yield widget;
+          yield const SizedBox(height: 8);
+        }),
+        const SizedBox(height: 16),
+
+        // 최근 30일 현황
+        _buildDetailLabel(c, '최근 30일 현황'),
+        const SizedBox(height: 12),
+        _buildRoutineDotGrid(c, dayHistory),
+        const SizedBox(height: 12),
+        _buildRoutineDotLegend(c),
+        const SizedBox(height: 16),
+
+        // 인사이트
+        _buildDetailInsight(c, _routineInsight(routineTitle, rate, currentStreak, maxStreak, isBest)),
+      ],
+    );
+  }
+
+  String _routineInsight(String title, int rate, int currentStreak, int maxStreak, bool isBest) {
+    final buf = StringBuffer();
+    if (isBest) {
+      buf.write('"$title" 루틴의 달성률이 $rate%로 가장 꾸준히 실천하고 있어요!');
+      if (currentStreak > 0) {
+        buf.write(' 현재 $currentStreak일 연속 진행 중이에요.');
+      }
+      if (maxStreak > currentStreak && maxStreak > 0) {
+        buf.write(' 최고 기록 ${maxStreak}일에 도전해보세요!');
+      }
+    } else {
+      buf.write('"$title" 루틴의 달성률이 $rate%로 개선이 필요해요.');
+      if (rate < 20) {
+        buf.write(' 매일 작은 것부터 시작해보세요.');
+      } else {
+        buf.write(' 조금만 더 꾸준히 하면 좋아질 거예요!');
+      }
+      if (currentStreak > 0) {
+        buf.write(' 현재 $currentStreak일 연속 중이니 이어가봐요!');
+      }
+    }
+    return buf.toString();
+  }
+
+  // ── 상세 분석 공용 위젯 ──
+
+  Widget _buildDetailStats(AppColors c, List<Map<String, dynamic>> stats) {
+    return Row(
+      children: stats.asMap().entries.map((entry) {
+        final s = entry.value;
+        final isLast = entry.key == stats.length - 1;
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(right: isLast ? 0 : 8),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            decoration: BoxDecoration(
+              color: c.scaffoldBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  s['value'] as String,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: s['color'] as Color,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  s['label'] as String,
+                  style: TextStyle(fontSize: 12, color: c.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDetailLabel(AppColors c, String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+        color: c.textPrimary,
+      ),
+    );
+  }
+
+  Widget _buildComparisonRow(AppColors c, String label, int completed, int total, double ratePercent) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: c.cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.borderColor),
+        color: c.scaffoldBg,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 16, color: iconColor ?? c.primary),
-                const SizedBox(width: 4),
-              ],
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: c.textSecondary,
-                  ),
-                ),
+              Text(
+                label,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary),
+              ),
+              const Spacer(),
+              Text(
+                '$completed/$total (${ratePercent.round()}%)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textSecondary),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: c.textPrimary,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: total > 0 ? completed / total : 0,
+              minHeight: 6,
+              backgroundColor: c.textPrimary.withOpacity(0.08),
+              valueColor: AlwaysStoppedAnimation(c.primary),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayRow(AppColors c, Map<String, dynamic> d, {bool isBest = false, bool isWorst = false}) {
+    final isPast = d['isPast'] as bool;
+    final isToday = d['isToday'] as bool;
+    final label = d['label'] as String;
+    final completed = d['completed'] as int;
+    final total = d['total'] as int;
+    final rate = d['rate'] as double;
+
+    Color dotColor;
+    if (!isPast || total == 0) {
+      dotColor = c.subtle.withOpacity(0.3);
+    } else if (rate >= 0.8) {
+      dotColor = const Color(0xFF22C55E);
+    } else if (rate >= 0.5) {
+      dotColor = const Color(0xFFFBBF24);
+    } else {
+      dotColor = const Color(0xFFEF4444);
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isToday ? c.primary.withOpacity(0.08) : c.scaffoldBg,
+        borderRadius: BorderRadius.circular(10),
+        border: isToday ? Border.all(color: c.primary.withOpacity(0.3)) : null,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 28,
+            child: Text(
+              label,
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: subtitleColor ?? c.textSecondary,
+                fontSize: 14,
+                fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
+                color: isToday ? c.primary : c.textPrimary,
               ),
             ),
+          ),
+          if (isToday) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(4)),
+              child: const Text('오늘', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+            ),
+            const SizedBox(width: 8),
           ],
+          if (isBest && isPast && total > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF22C55E).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text('Best', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF22C55E))),
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (isWorst && isPast && total > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text('Low', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFEF4444))),
+            ),
+            const SizedBox(width: 8),
+          ],
+          const Spacer(),
+          if (isPast && total > 0) ...[
+            Text(
+              '$completed/$total',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 42,
+              child: Text(
+                '${(rate * 100).round()}%',
+                textAlign: TextAlign.right,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: dotColor),
+              ),
+            ),
+          ] else
+            Text(
+              isPast ? '없음' : '-',
+              style: TextStyle(fontSize: 14, color: c.subtle),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeekRow(AppColors c, Map<String, dynamic> w, {bool isBest = false}) {
+    final label = w['label'] as String;
+    final completed = w['completed'] as int;
+    final total = w['total'] as int;
+    final rate = w['rate'] as double;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isBest ? c.primary.withOpacity(0.08) : c.scaffoldBg,
+        borderRadius: BorderRadius.circular(10),
+        border: isBest ? Border.all(color: c.primary.withOpacity(0.3)) : null,
+      ),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: isBest ? c.primary : c.textPrimary,
+            ),
+          ),
+          if (isBest) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: c.primary.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text('Best', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: c.primary)),
+            ),
+          ],
+          const Spacer(),
+          Text(
+            '$completed/$total',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 42,
+            child: Text(
+              total > 0 ? '${(rate * 100).round()}%' : '-',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: total > 0
+                    ? (rate >= 0.8 ? const Color(0xFF22C55E) : rate >= 0.5 ? const Color(0xFFFBBF24) : const Color(0xFFEF4444))
+                    : c.subtle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayDotsGrid(AppColors c, List<Map<String, dynamic>> days) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: days.map((d) {
+        final rate = d['rate'] as double;
+        final total = d['total'] as int;
+        final isToday = d['isToday'] as bool;
+
+        Color dotColor;
+        if (total == 0) {
+          dotColor = c.subtle.withOpacity(0.2);
+        } else if (rate >= 0.8) {
+          dotColor = const Color(0xFF22C55E);
+        } else if (rate >= 0.5) {
+          dotColor = const Color(0xFFFBBF24);
+        } else if (rate > 0) {
+          dotColor = const Color(0xFFEF4444);
+        } else {
+          dotColor = c.subtle.withOpacity(0.3);
+        }
+
+        return Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: dotColor.withOpacity(isToday ? 1.0 : 0.7),
+            borderRadius: BorderRadius.circular(8),
+            border: isToday ? Border.all(color: c.primary, width: 2) : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '${d['day']}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
+              color: total > 0 && rate > 0 ? Colors.white : c.textSecondary,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDotLegend(AppColors c) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _legendDot(c, const Color(0xFF22C55E), '80%+'),
+        const SizedBox(width: 16),
+        _legendDot(c, const Color(0xFFFBBF24), '50%+'),
+        const SizedBox(width: 16),
+        _legendDot(c, const Color(0xFFEF4444), '50%-'),
+        const SizedBox(width: 16),
+        _legendDot(c, c.subtle.withOpacity(0.3), '없음'),
+      ],
+    );
+  }
+
+  Widget _legendDot(AppColors c, Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 11, color: c.textSecondary)),
+      ],
+    );
+  }
+
+  Widget _buildRoutineDotGrid(AppColors c, List<Map<String, dynamic>> dayHistory) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: dayHistory.map((d) {
+        final active = d['active'] as bool;
+        final done = d['done'] as bool;
+        final date = d['date'] as DateTime;
+
+        Color dotColor;
+        if (!active) {
+          dotColor = c.subtle.withOpacity(0.1);
+        } else if (done) {
+          dotColor = const Color(0xFF22C55E);
+        } else {
+          dotColor = const Color(0xFFEF4444).withOpacity(0.5);
+        }
+
+        return Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: dotColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '${date.day}',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: active ? Colors.white : c.subtle,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRoutineDotLegend(AppColors c) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _legendDot(c, const Color(0xFF22C55E), '완료'),
+        const SizedBox(width: 16),
+        _legendDot(c, const Color(0xFFEF4444).withOpacity(0.5), '미완료'),
+        const SizedBox(width: 16),
+        _legendDot(c, c.subtle.withOpacity(0.1), '비활성'),
+      ],
+    );
+  }
+
+  Widget _buildDetailInsight(AppColors c, String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.analysisBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lightbulb_outline, size: 18, color: c.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 13, color: c.textPrimary, height: 1.5),
+            ),
+          ),
         ],
       ),
     );
