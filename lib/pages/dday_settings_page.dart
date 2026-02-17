@@ -631,13 +631,54 @@ class EventCard extends StatefulWidget {
   State<EventCard> createState() => _EventCardState();
 }
 
-class _EventCardState extends State<EventCard> {
+class _EventCardState extends State<EventCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _progressAnim;
+
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
     final total = widget.targetDate.difference(widget.startDate).inDays;
     final done = DateTime.now().difference(widget.startDate).inDays;
-    final progress = total <= 0 ? 0.0 : (done / total).clamp(0.0, 1.0);
+    final target = total <= 0 ? 0.0 : (done / total).clamp(0.0, 1.0);
 
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _progressAnim = Tween<double>(begin: 0.0, end: target).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
+    _animController.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant EventCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.startDate != widget.startDate ||
+        oldWidget.targetDate != widget.targetDate) {
+      final total = widget.targetDate.difference(widget.startDate).inDays;
+      final done = DateTime.now().difference(widget.startDate).inDays;
+      final newTarget = total <= 0 ? 0.0 : (done / total).clamp(0.0, 1.0);
+      final oldValue = _progressAnim.value;
+      _progressAnim = Tween<double>(begin: oldValue, end: newTarget).animate(
+        CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+      );
+      _animController
+        ..reset()
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     String dDayText(DateTime targetDate) {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -705,28 +746,38 @@ class _EventCardState extends State<EventCard> {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              const Spacer(),
-              Text(
-                '${widget.percent}%',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: Colors.white.withOpacity(0.25),
-              valueColor: const AlwaysStoppedAnimation(Colors.white),
-            ),
+          AnimatedBuilder(
+            animation: _progressAnim,
+            builder: (context, child) {
+              final animPercent = (_progressAnim.value * 100).round();
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      const Spacer(),
+                      Text(
+                        '$animPercent%',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: _progressAnim.value,
+                      minHeight: 8,
+                      backgroundColor: Colors.white.withOpacity(0.25),
+                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 8),
           Row(
