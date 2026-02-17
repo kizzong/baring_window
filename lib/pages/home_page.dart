@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:baring_windows/pages/dday_settings_page.dart';
 import 'package:baring_windows/services/notification_service.dart';
 import 'package:baring_windows/services/widget_service.dart';
+import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -192,17 +193,18 @@ class _HomePageState extends State<HomePage> {
           ? '${notifyBefore ~/ 60}시간 전'
           : '$notifyBefore분 전';
 
+      final c = context.colors;
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1A2332),
+          backgroundColor: c.dialogBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text(
+          title: Text(
             '할 일 완료',
             style: TextStyle(
-              color: Colors.white,
+              color: c.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 18,
             ),
@@ -211,7 +213,7 @@ class _HomePageState extends State<HomePage> {
             '${todo['time']} ${todo['title']}\n\n'
             '설정된 알림($notifyLabel)이 취소됩니다.\n완료 처리하시겠습니까?',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: c.textSecondary,
               fontSize: 14,
               height: 1.5,
             ),
@@ -221,7 +223,7 @@ class _HomePageState extends State<HomePage> {
               onPressed: () => Navigator.pop(ctx),
               child: Text(
                 '취소',
-                style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                style: TextStyle(color: c.textPrimary.withOpacity(0.5)),
               ),
             ),
             TextButton(
@@ -230,10 +232,10 @@ class _HomePageState extends State<HomePage> {
                 _performToggle(index, todo, true);
                 _cancelNotificationForTodo(index);
               },
-              child: const Text(
+              child: Text(
                 '완료',
                 style: TextStyle(
-                  color: Color(0xFF2D86FF),
+                  color: c.primary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -351,20 +353,21 @@ class _HomePageState extends State<HomePage> {
     if (index >= todayRoutines.length) return;
     final routine = todayRoutines[index];
 
+    final c = context.colors;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A2332),
+        backgroundColor: c.dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('루틴 삭제', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text('루틴 삭제', style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
         content: Text(
           '"${routine['title']}" 루틴을 삭제하시겠습니까?',
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+          style: TextStyle(color: c.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+            child: Text('취소', style: TextStyle(color: c.textPrimary.withOpacity(0.5))),
           ),
           TextButton(
             onPressed: () {
@@ -397,20 +400,21 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
     WidgetService.syncWidget();
 
+    final c = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           '"${removed['title']}" 루틴 삭제됨',
-          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white60),
+          style: TextStyle(fontWeight: FontWeight.w600, color: c.textSecondary),
         ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
-        backgroundColor: const Color(0xFF1A2332),
+        backgroundColor: c.dialogBg,
         duration: const Duration(seconds: 2),
         action: SnackBarAction(
           label: '되돌리기',
-          textColor: const Color(0xFF2D86FF),
+          textColor: c.primary,
           onPressed: () {
             final raw = baringBox.get('routines');
             final list = raw != null
@@ -431,20 +435,21 @@ class _HomePageState extends State<HomePage> {
     if (index >= todos.length) return;
     final todo = todos[index];
 
+    final c = context.colors;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A2332),
+        backgroundColor: c.dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('할 일 삭제', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text('할 일 삭제', style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
         content: Text(
           '"${todo['title']}" 할 일을 삭제하시겠습니까?',
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+          style: TextStyle(color: c.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+            child: Text('취소', style: TextStyle(color: c.textPrimary.withOpacity(0.5))),
           ),
           TextButton(
             onPressed: () {
@@ -476,20 +481,21 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
     WidgetService.syncWidget();
 
+    final c = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           '"${removed['title']}" 삭제됨',
-          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white60),
+          style: TextStyle(fontWeight: FontWeight.w600, color: c.textSecondary),
         ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
-        backgroundColor: const Color(0xFF1A2332),
+        backgroundColor: c.dialogBg,
         duration: const Duration(seconds: 2),
         action: SnackBarAction(
           label: '되돌리기',
-          textColor: const Color(0xFF2D86FF),
+          textColor: c.primary,
           onPressed: () {
             final raw = baringBox.get('todos');
             final Map data = raw != null ? Map.from(raw) : {};
@@ -579,6 +585,7 @@ class _HomePageState extends State<HomePage> {
       {'label': '1시간 전', 'value': 60},
     ];
 
+    final c = context.colors;
     showDialog(
       context: context,
       builder: (ctx) {
@@ -600,9 +607,9 @@ class _HomePageState extends State<HomePage> {
             return GestureDetector(
               onTap: () => focusNode.unfocus(),
               child: AlertDialog(
-                backgroundColor: const Color(0xFF1A2332),
+                backgroundColor: c.dialogBg,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                title: const Text('할 일 추가', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                title: Text('할 일 추가', style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
                 content: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -613,13 +620,13 @@ class _HomePageState extends State<HomePage> {
                         focusNode: focusNode,
                         autofocus: true,
                         maxLength: 20,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: c.textPrimary),
                         decoration: InputDecoration(
                           hintText: '할 일을 입력하세요',
-                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-                          counterStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white.withOpacity(0.15))),
-                          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF2D86FF))),
+                          hintStyle: TextStyle(color: c.textPrimary.withOpacity(0.4)),
+                          counterStyle: TextStyle(color: c.textPrimary.withOpacity(0.4)),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: c.textPrimary.withOpacity(0.15))),
+                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: c.primary)),
                         ),
                         onEditingComplete: () => focusNode.unfocus(),
                       ),
@@ -633,8 +640,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5)))),
-                  TextButton(onPressed: submit, child: const Text('추가', style: TextStyle(color: Color(0xFF2D86FF), fontWeight: FontWeight.w700))),
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('취소', style: TextStyle(color: c.textPrimary.withOpacity(0.5)))),
+                  TextButton(onPressed: submit, child: Text('추가', style: TextStyle(color: c.primary, fontWeight: FontWeight.w700))),
                 ],
               ),
             );
@@ -667,6 +674,7 @@ class _HomePageState extends State<HomePage> {
       {'label': '1시간 전', 'value': 60},
     ];
 
+    final c = context.colors;
     showDialog(
       context: context,
       builder: (ctx) {
@@ -688,9 +696,9 @@ class _HomePageState extends State<HomePage> {
             return GestureDetector(
               onTap: () => focusNode.unfocus(),
               child: AlertDialog(
-                backgroundColor: const Color(0xFF1A2332),
+                backgroundColor: c.dialogBg,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                title: const Text('할 일 수정', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                title: Text('할 일 수정', style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
                 content: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -701,13 +709,13 @@ class _HomePageState extends State<HomePage> {
                         focusNode: focusNode,
                         autofocus: true,
                         maxLength: 20,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: c.textPrimary),
                         decoration: InputDecoration(
                           hintText: '할 일을 입력하세요',
-                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-                          counterStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white.withOpacity(0.15))),
-                          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF2D86FF))),
+                          hintStyle: TextStyle(color: c.textPrimary.withOpacity(0.4)),
+                          counterStyle: TextStyle(color: c.textPrimary.withOpacity(0.4)),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: c.textPrimary.withOpacity(0.15))),
+                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: c.primary)),
                         ),
                         onEditingComplete: () => focusNode.unfocus(),
                       ),
@@ -721,8 +729,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5)))),
-                  TextButton(onPressed: submit, child: const Text('수정', style: TextStyle(color: Color(0xFF2D86FF), fontWeight: FontWeight.w700))),
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('취소', style: TextStyle(color: c.textPrimary.withOpacity(0.5)))),
+                  TextButton(onPressed: submit, child: Text('수정', style: TextStyle(color: c.primary, fontWeight: FontWeight.w700))),
                 ],
               ),
             );
@@ -757,6 +765,7 @@ class _HomePageState extends State<HomePage> {
       {'label': '1시간 전', 'value': 60},
     ];
 
+    final c = context.colors;
     showDialog(
       context: context,
       builder: (ctx) {
@@ -779,9 +788,9 @@ class _HomePageState extends State<HomePage> {
             return GestureDetector(
               onTap: () => focusNode.unfocus(),
               child: AlertDialog(
-                backgroundColor: const Color(0xFF1A2332),
+                backgroundColor: c.dialogBg,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                title: const Text('루틴 수정', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                title: Text('루틴 수정', style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
                 content: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -792,18 +801,18 @@ class _HomePageState extends State<HomePage> {
                         focusNode: focusNode,
                         autofocus: true,
                         maxLength: 20,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: c.textPrimary),
                         decoration: InputDecoration(
                           hintText: '루틴 이름을 입력하세요',
-                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-                          counterStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white.withOpacity(0.15))),
-                          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF2D86FF))),
+                          hintStyle: TextStyle(color: c.textPrimary.withOpacity(0.4)),
+                          counterStyle: TextStyle(color: c.textPrimary.withOpacity(0.4)),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: c.textPrimary.withOpacity(0.15))),
+                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: c.primary)),
                         ),
                         onEditingComplete: () => focusNode.unfocus(),
                       ),
                       const SizedBox(height: 16),
-                      Text('반복', style: TextStyle(color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text('반복', style: TextStyle(color: c.textPrimary.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13)),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -813,11 +822,11 @@ class _HomePageState extends State<HomePage> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: routineType == 'daily' ? const Color(0xFF2D86FF).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                                  color: routineType == 'daily' ? c.primary.withOpacity(0.2) : c.textPrimary.withOpacity(0.05),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: routineType == 'daily' ? const Color(0xFF2D86FF) : Colors.white.withOpacity(0.1)),
+                                  border: Border.all(color: routineType == 'daily' ? c.primary : c.textPrimary.withOpacity(0.1)),
                                 ),
-                                child: Center(child: Text('매일', style: TextStyle(color: routineType == 'daily' ? const Color(0xFF2D86FF) : Colors.white.withOpacity(0.6), fontWeight: FontWeight.w700, fontSize: 14))),
+                                child: Center(child: Text('매일', style: TextStyle(color: routineType == 'daily' ? c.primary : c.textPrimary.withOpacity(0.6), fontWeight: FontWeight.w700, fontSize: 14))),
                               ),
                             ),
                           ),
@@ -828,11 +837,11 @@ class _HomePageState extends State<HomePage> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: routineType == 'weekly' ? const Color(0xFF2D86FF).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                                  color: routineType == 'weekly' ? c.primary.withOpacity(0.2) : c.textPrimary.withOpacity(0.05),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: routineType == 'weekly' ? const Color(0xFF2D86FF) : Colors.white.withOpacity(0.1)),
+                                  border: Border.all(color: routineType == 'weekly' ? c.primary : c.textPrimary.withOpacity(0.1)),
                                 ),
-                                child: Center(child: Text('특정 요일', style: TextStyle(color: routineType == 'weekly' ? const Color(0xFF2D86FF) : Colors.white.withOpacity(0.6), fontWeight: FontWeight.w700, fontSize: 14))),
+                                child: Center(child: Text('특정 요일', style: TextStyle(color: routineType == 'weekly' ? c.primary : c.textPrimary.withOpacity(0.6), fontWeight: FontWeight.w700, fontSize: 14))),
                               ),
                             ),
                           ),
@@ -850,11 +859,11 @@ class _HomePageState extends State<HomePage> {
                               child: Container(
                                 width: 34, height: 34,
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFF2D86FF) : Colors.white.withOpacity(0.05),
+                                  color: isSelected ? c.primary : c.textPrimary.withOpacity(0.05),
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.1)),
+                                  border: Border.all(color: isSelected ? Colors.transparent : c.textPrimary.withOpacity(0.1)),
                                 ),
-                                child: Center(child: Text(_dayNames[i], style: TextStyle(color: isSelected ? Colors.white : Colors.white.withOpacity(0.5), fontWeight: FontWeight.w700, fontSize: 12))),
+                                child: Center(child: Text(_dayNames[i], style: TextStyle(color: isSelected ? Colors.white : c.textPrimary.withOpacity(0.5), fontWeight: FontWeight.w700, fontSize: 12))),
                               ),
                             );
                           }),
@@ -870,8 +879,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5)))),
-                  TextButton(onPressed: submit, child: const Text('수정', style: TextStyle(color: Color(0xFF2D86FF), fontWeight: FontWeight.w700))),
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('취소', style: TextStyle(color: c.textPrimary.withOpacity(0.5)))),
+                  TextButton(onPressed: submit, child: Text('수정', style: TextStyle(color: c.primary, fontWeight: FontWeight.w700))),
                 ],
               ),
             );
@@ -886,6 +895,7 @@ class _HomePageState extends State<HomePage> {
     required void Function(TimeOfDay) onTimeSelected,
     required VoidCallback onTimeClear,
   }) {
+    final c = context.colors;
     return GestureDetector(
       onTap: () async {
         DateTime tempTime = DateTime(2000, 1, 1, selectedTime?.hour ?? TimeOfDay.now().hour, selectedTime?.minute ?? TimeOfDay.now().minute);
@@ -894,7 +904,7 @@ class _HomePageState extends State<HomePage> {
           builder: (pickerCtx) {
             return Container(
               height: 300,
-              decoration: const BoxDecoration(color: Color(0xFF1A2332), borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              decoration: BoxDecoration(color: c.dialogBg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
               child: Column(
                 children: [
                   Padding(
@@ -902,8 +912,8 @@ class _HomePageState extends State<HomePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        CupertinoButton(padding: EdgeInsets.zero, child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 16)), onPressed: () => Navigator.pop(pickerCtx)),
-                        CupertinoButton(padding: EdgeInsets.zero, child: const Text('확인', style: TextStyle(color: Color(0xFF2D86FF), fontWeight: FontWeight.w700, fontSize: 16)), onPressed: () { onTimeSelected(TimeOfDay(hour: tempTime.hour, minute: tempTime.minute)); Navigator.pop(pickerCtx); }),
+                        CupertinoButton(padding: EdgeInsets.zero, child: Text('취소', style: TextStyle(color: c.textPrimary.withOpacity(0.5), fontSize: 16)), onPressed: () => Navigator.pop(pickerCtx)),
+                        CupertinoButton(padding: EdgeInsets.zero, child: Text('확인', style: TextStyle(color: c.primary, fontWeight: FontWeight.w700, fontSize: 16)), onPressed: () { onTimeSelected(TimeOfDay(hour: tempTime.hour, minute: tempTime.minute)); Navigator.pop(pickerCtx); }),
                       ],
                     ),
                   ),
@@ -912,7 +922,7 @@ class _HomePageState extends State<HomePage> {
                       locale: const Locale('ko', 'KR'),
                       delegates: const [GlobalCupertinoLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
                       child: CupertinoTheme(
-                        data: const CupertinoThemeData(brightness: Brightness.dark, textTheme: CupertinoTextThemeData(dateTimePickerTextStyle: TextStyle(color: Colors.white, fontSize: 22))),
+                        data: CupertinoThemeData(brightness: Brightness.dark, textTheme: CupertinoTextThemeData(dateTimePickerTextStyle: TextStyle(color: Colors.white, fontSize: 22))),
                         child: CupertinoDatePicker(mode: CupertinoDatePickerMode.time, initialDateTime: tempTime, use24hFormat: false, onDateTimeChanged: (dt) => tempTime = dt),
                       ),
                     ),
@@ -926,20 +936,20 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: c.textPrimary.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selectedTime != null ? const Color(0xFF2D86FF).withOpacity(0.5) : Colors.white.withOpacity(0.1)),
+          border: Border.all(color: selectedTime != null ? c.primary.withOpacity(0.5) : c.textPrimary.withOpacity(0.1)),
         ),
         child: Row(
           children: [
-            Icon(Icons.access_time_rounded, size: 20, color: selectedTime != null ? const Color(0xFF2D86FF) : Colors.white.withOpacity(0.4)),
+            Icon(Icons.access_time_rounded, size: 20, color: selectedTime != null ? c.primary : c.textPrimary.withOpacity(0.4)),
             const SizedBox(width: 10),
             Text(
               selectedTime != null ? '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}' : '시간 선택 (선택사항)',
-              style: TextStyle(color: selectedTime != null ? Colors.white : Colors.white.withOpacity(0.4), fontWeight: FontWeight.w600, fontSize: 14),
+              style: TextStyle(color: selectedTime != null ? c.textPrimary : c.textPrimary.withOpacity(0.4), fontWeight: FontWeight.w600, fontSize: 14),
             ),
             const Spacer(),
-            if (selectedTime != null) GestureDetector(onTap: onTimeClear, child: Icon(Icons.close, size: 18, color: Colors.white.withOpacity(0.4))),
+            if (selectedTime != null) GestureDetector(onTap: onTimeClear, child: Icon(Icons.close, size: 18, color: c.textPrimary.withOpacity(0.4))),
           ],
         ),
       ),
@@ -951,10 +961,11 @@ class _HomePageState extends State<HomePage> {
     required int? selectedNotifyBefore,
     required void Function(int?) onSelected,
   }) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('알림', style: TextStyle(color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13)),
+        Text('알림', style: TextStyle(color: c.textPrimary.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8, runSpacing: 8,
@@ -966,11 +977,11 @@ class _HomePageState extends State<HomePage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF2D86FF).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                  color: isSelected ? c.primary.withOpacity(0.2) : c.textPrimary.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: isSelected ? const Color(0xFF2D86FF) : Colors.white.withOpacity(0.1)),
+                  border: Border.all(color: isSelected ? c.primary : c.textPrimary.withOpacity(0.1)),
                 ),
-                child: Text(option['label'] as String, style: TextStyle(color: isSelected ? const Color(0xFF2D86FF) : Colors.white.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13)),
+                child: Text(option['label'] as String, style: TextStyle(color: isSelected ? c.primary : c.textPrimary.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13)),
               ),
             );
           }).toList(),
@@ -981,6 +992,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final userName = baringBox.get("userName", defaultValue: "바링"); // 이름 불러오기 ⭐
     final profileImagePath = baringBox.get("profileImagePath"); // 추가 ⭐
 
@@ -996,7 +1008,7 @@ class _HomePageState extends State<HomePage> {
     final selectedPreset = eventData?["selectedPreset"] ?? 0;
 
     return Scaffold(
-      backgroundColor: Color(0xFF0B1623),
+      backgroundColor: c.scaffoldBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
@@ -1010,10 +1022,10 @@ class _HomePageState extends State<HomePage> {
                     height: 46,
                     width: 46,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: c.borderColor,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.10),
+                        color: c.textPrimary.withOpacity(0.10),
                         width: 2,
                       ),
                     ),
@@ -1024,20 +1036,20 @@ class _HomePageState extends State<HomePage> {
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
-                                  color: Colors.white.withOpacity(0.08),
-                                  child: const Icon(
+                                  color: c.borderColor,
+                                  child: Icon(
                                     Icons.person,
-                                    color: Colors.white70,
+                                    color: c.textSecondary,
                                     size: 24,
                                   ),
                                 );
                               },
                             )
                           : Container(
-                              color: Colors.white.withOpacity(0.08),
-                              child: const Icon(
+                              color: c.borderColor,
+                              child: Icon(
                                 Icons.person,
-                                color: Colors.white70,
+                                color: c.textSecondary,
                                 size: 24,
                               ),
                             ),
@@ -1051,7 +1063,7 @@ class _HomePageState extends State<HomePage> {
                         Text(
                           "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')} (${['일', '월', '화', '수', '목', '금', '토'][DateTime.now().weekday % 7]})",
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.65),
+                            color: c.textSecondary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1102,7 +1114,7 @@ class _HomePageState extends State<HomePage> {
                   const Spacer(),
                   IconButton(
                     onPressed: _showAddDialog,
-                    icon: const Icon(Icons.add, color: Color(0xFF2D86FF), size: 25),
+                    icon: Icon(Icons.add, color: c.primary, size: 25),
                   ),
                 ],
               ),
@@ -1117,17 +1129,17 @@ class _HomePageState extends State<HomePage> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF121E2B),
+                        color: c.cardBg,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.07),
+                          color: c.borderColor,
                         ),
                       ),
                       child: Center(
                         child: Text(
                           '루틴이 없습니다',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
+                            color: c.textPrimary.withOpacity(0.3),
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1161,10 +1173,10 @@ class _HomePageState extends State<HomePage> {
                           child: Container(
                             padding: const EdgeInsets.fromLTRB(14, 5, 12, 5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF121E2B),
+                              color: c.cardBg,
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.07),
+                                color: c.borderColor,
                               ),
                             ),
                             child: Row(
@@ -1179,8 +1191,8 @@ class _HomePageState extends State<HomePage> {
                                         Icons.repeat_rounded,
                                         size: 18,
                                         color: isDone
-                                            ? Colors.white.withOpacity(0.3)
-                                            : const Color(0xFF2D86FF).withOpacity(0.7),
+                                            ? c.textPrimary.withOpacity(0.3)
+                                            : c.primary.withOpacity(0.7),
                                       ),
                                       const SizedBox(width: 8),
                                       Container(
@@ -1188,13 +1200,13 @@ class _HomePageState extends State<HomePage> {
                                         width: 26,
                                         decoration: BoxDecoration(
                                           color: isDone
-                                              ? const Color(0xFF2D86FF)
+                                              ? c.primary
                                               : Colors.transparent,
                                           borderRadius: BorderRadius.circular(8),
                                           border: Border.all(
                                             color: isDone
                                                 ? Colors.transparent
-                                                : Colors.white.withOpacity(0.18),
+                                                : c.textPrimary.withOpacity(0.18),
                                             width: 1.6,
                                           ),
                                         ),
@@ -1225,8 +1237,8 @@ class _HomePageState extends State<HomePage> {
                                               ? TextDecoration.lineThrough
                                               : null,
                                           color: isDone
-                                              ? Colors.white.withOpacity(0.45)
-                                              : Colors.white,
+                                              ? c.textPrimary.withOpacity(0.45)
+                                              : c.textPrimary,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -1236,8 +1248,8 @@ class _HomePageState extends State<HomePage> {
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                           color: isDone
-                                              ? Colors.white.withOpacity(0.3)
-                                              : Colors.white.withOpacity(0.5),
+                                              ? c.textPrimary.withOpacity(0.3)
+                                              : c.textPrimary.withOpacity(0.5),
                                         ),
                                       ),
                                     ],
@@ -1248,7 +1260,7 @@ class _HomePageState extends State<HomePage> {
                                   icon: Icon(
                                     Icons.close,
                                     size: 18,
-                                    color: Colors.white.withOpacity(0.3),
+                                    color: c.textPrimary.withOpacity(0.3),
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -1276,17 +1288,17 @@ class _HomePageState extends State<HomePage> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF121E2B),
+                        color: c.cardBg,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.07),
+                          color: c.borderColor,
                         ),
                       ),
                       child: Center(
                         child: Text(
                           '할 일이 없습니다',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
+                            color: c.textPrimary.withOpacity(0.3),
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1321,10 +1333,10 @@ class _HomePageState extends State<HomePage> {
                           child: Container(
                             padding: const EdgeInsets.fromLTRB(14, 5, 12, 5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF121E2B),
+                              color: c.cardBg,
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.07),
+                                color: c.borderColor,
                               ),
                             ),
                             child: Row(
@@ -1337,13 +1349,13 @@ class _HomePageState extends State<HomePage> {
                                     width: 26,
                                     decoration: BoxDecoration(
                                       color: isDone
-                                          ? const Color(0xFF2D86FF)
+                                          ? c.primary
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
                                         color: isDone
                                             ? Colors.transparent
-                                            : Colors.white.withOpacity(0.18),
+                                            : c.textPrimary.withOpacity(0.18),
                                         width: 1.6,
                                       ),
                                     ),
@@ -1372,8 +1384,8 @@ class _HomePageState extends State<HomePage> {
                                               ? TextDecoration.lineThrough
                                               : null,
                                           color: isDone
-                                              ? Colors.white.withOpacity(0.45)
-                                              : Colors.white,
+                                              ? c.textPrimary.withOpacity(0.45)
+                                              : c.textPrimary,
                                         ),
                                       ),
                                       if (timeStr != null) ...[
@@ -1384,8 +1396,8 @@ class _HomePageState extends State<HomePage> {
                                               Icons.access_time_rounded,
                                               size: 13,
                                               color: isDone
-                                                  ? Colors.white.withOpacity(0.3)
-                                                  : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                  ? c.textPrimary.withOpacity(0.3)
+                                                  : c.primary.withOpacity(0.7),
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
@@ -1394,8 +1406,8 @@ class _HomePageState extends State<HomePage> {
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w600,
                                                 color: isDone
-                                                    ? Colors.white.withOpacity(0.3)
-                                                    : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                    ? c.textPrimary.withOpacity(0.3)
+                                                    : c.primary.withOpacity(0.7),
                                               ),
                                             ),
                                             if (notifyBefore != null) ...[
@@ -1404,8 +1416,8 @@ class _HomePageState extends State<HomePage> {
                                                 Icons.notifications_active_outlined,
                                                 size: 13,
                                                 color: isDone
-                                                    ? Colors.white.withOpacity(0.3)
-                                                    : Colors.white.withOpacity(0.4),
+                                                    ? c.textPrimary.withOpacity(0.3)
+                                                    : c.textPrimary.withOpacity(0.4),
                                               ),
                                               const SizedBox(width: 2),
                                               Text(
@@ -1416,8 +1428,8 @@ class _HomePageState extends State<HomePage> {
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w500,
                                                   color: isDone
-                                                      ? Colors.white.withOpacity(0.3)
-                                                      : Colors.white.withOpacity(0.4),
+                                                      ? c.textPrimary.withOpacity(0.3)
+                                                      : c.textPrimary.withOpacity(0.4),
                                                 ),
                                               ),
                                             ],
@@ -1432,7 +1444,7 @@ class _HomePageState extends State<HomePage> {
                                   icon: Icon(
                                     Icons.close,
                                     size: 18,
-                                    color: Colors.white.withOpacity(0.3),
+                                    color: c.textPrimary.withOpacity(0.3),
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -1455,7 +1467,7 @@ class _HomePageState extends State<HomePage> {
               // 나의 목표 상황
               Row(
                 children: [
-                  Icon(Icons.bar_chart, color: Colors.white, size: 22),
+                  Icon(Icons.bar_chart, color: c.textPrimary, size: 22),
                   const SizedBox(width: 8),
                   const Text(
                     '분석',
@@ -1468,14 +1480,14 @@ class _HomePageState extends State<HomePage> {
                       vertical: 7,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0F2538),
+                      color: c.chipBg,
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: Colors.white.withOpacity(0.06)),
+                      border: Border.all(color: c.borderColor),
                     ),
-                    child: const Text(
+                    child: Text(
                       '준비중...',
                       style: TextStyle(
-                        color: Color(0xFF2D86FF),
+                        color: c.primary,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1483,10 +1495,10 @@ class _HomePageState extends State<HomePage> {
                   const Spacer(),
                   TextButton(
                     onPressed: () {},
-                    child: const Text(
+                    child: Text(
                       '자세히',
                       style: TextStyle(
-                        color: Color(0xFF2D86FF),
+                        color: c.primary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1503,10 +1515,10 @@ class _HomePageState extends State<HomePage> {
                       // height: 140,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Color(0xFF0F1F2E),
+                        color: c.analysisBg,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.06),
+                          color: c.borderColor,
                         ),
                       ),
                       child: Column(
@@ -1529,7 +1541,7 @@ class _HomePageState extends State<HomePage> {
                                           value: 1,
                                           strokeWidth: 7,
                                           valueColor: AlwaysStoppedAnimation(
-                                            Colors.white.withOpacity(0.10),
+                                            c.textPrimary.withOpacity(0.10),
                                           ),
                                         ),
                                       ),
@@ -1567,7 +1579,7 @@ class _HomePageState extends State<HomePage> {
                                 Text(
                                   "24/28",
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.55),
+                                    color: c.textPrimary.withOpacity(0.55),
                                     fontWeight: FontWeight.w800,
                                     fontSize: 12,
                                     letterSpacing: 0.4,

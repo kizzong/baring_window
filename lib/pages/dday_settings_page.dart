@@ -1,4 +1,5 @@
 import 'package:baring_windows/services/widget_service.dart';
+import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
@@ -61,6 +62,8 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
   }
 
   Future<void> _pickDate({required bool isStart}) async {
+    final c = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final initial = isStart ? startDate : targetDate;
     final picked = await showDatePicker(
       context: context,
@@ -71,10 +74,9 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF3B82F6),
-              surface: Color(0xFF0E1621),
-            ),
+            colorScheme: isDark
+                ? ColorScheme.dark(primary: c.primary, surface: c.scaffoldBg)
+                : ColorScheme.light(primary: c.primary, surface: c.scaffoldBg),
           ),
           child: child!,
         );
@@ -131,14 +133,15 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final card = const Color(0xFF101B26);
+    final c = context.colors;
+    final card = c.cardBg;
 
     final selected = presets[selectedPreset].colors;
 
     return Scaffold(
-      backgroundColor: Color(0xFF0B1623),
+      backgroundColor: c.scaffoldBg,
       appBar: AppBar(
-        backgroundColor: Color(0xFF0B1623),
+        backgroundColor: c.scaffoldBg,
         centerTitle: true,
 
         leading: IconButton(
@@ -146,13 +149,13 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
             Navigator.pop(context);
           },
           icon: Icon(Icons.chevron_left),
-          color: Color(0xFF3B82F6),
+          color: c.primary,
         ),
 
         title: Text(
           'D-Day 설정',
           style: TextStyle(
-            color: Colors.white,
+            color: c.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
@@ -178,7 +181,7 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
             child: Text(
               "완료",
               style: TextStyle(
-                color: Color(0xFF3B82F6),
+                color: c.primary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
@@ -218,8 +221,8 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
                               title = _titleController.text;
                             });
                           },
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: c.textPrimary,
                             fontSize: 16,
                           ),
                           decoration: const InputDecoration(
@@ -246,15 +249,15 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
                                     children: [
                                       Text(
                                         fmtDate(startDate),
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: c.textPrimary,
                                           fontSize: 16,
                                         ),
                                       ),
                                       const Spacer(),
-                                      const Icon(
+                                      Icon(
                                         Icons.calendar_month_rounded,
-                                        color: Color(0xFF7B8DA0),
+                                        color: c.subtle,
                                         size: 20,
                                       ),
                                     ],
@@ -276,15 +279,15 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
                                     children: [
                                       Text(
                                         fmtDate(targetDate),
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: c.textPrimary,
                                           fontSize: 16,
                                         ),
                                       ),
                                       const Spacer(),
-                                      const Icon(
+                                      Icon(
                                         Icons.calendar_month_rounded,
-                                        color: Color(0xFF7B8DA0),
+                                        color: c.subtle,
                                         size: 20,
                                       ),
                                     ],
@@ -313,14 +316,14 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.05),
+                        color: c.textPrimary.withOpacity(0.05),
                         // color: colo,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         'Primium',
                         style: TextStyle(
-                          color: Color(0xFF3B82F6),
+                          color: c.primary,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
@@ -408,14 +411,15 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF3B82F6), size: 22),
+        Icon(icon, color: c.primary, size: 22),
         const SizedBox(width: 10),
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: c.textPrimary,
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
@@ -431,10 +435,11 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Text(
       text,
-      style: const TextStyle(
-        color: Color(0xFF7B8DA0),
+      style: TextStyle(
+        color: c.subtle,
         fontSize: 12,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.8,
@@ -450,13 +455,13 @@ class _GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        // color: color.withOpacity(0.92),
-        color: color.withValues(alpha: 0.92),
+        color: c.cardBg.withOpacity(0.92),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: c.borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.35),
@@ -478,15 +483,16 @@ class _InputBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF0B131C),
+          color: c.inputBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: c.borderColor),
         ),
         child: child,
       ),
@@ -510,6 +516,7 @@ class _PresetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
@@ -526,7 +533,7 @@ class _PresetTile extends StatelessWidget {
                 colors: colors,
               ),
               border: Border.all(
-                color: selected ? const Color(0xFF3B82F6) : Colors.transparent,
+                color: selected ? c.primary : Colors.transparent,
                 width: 2.2,
               ),
               boxShadow: [
@@ -543,35 +550,11 @@ class _PresetTile extends StatelessWidget {
                   )
                 : null,
           ),
-          // Transform.scale(
-          //   scale: 2.1,
-          //   child: Transform.translate(
-          //     offset: const Offset(7, -3),
-          //     child: Container(
-          //       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-          //       decoration: BoxDecoration(
-          //         color: Colors.black.withValues(alpha: 0.8),
-          //         borderRadius: BorderRadius.circular(12),
-          //       ),
-          //       child: Text(
-          //         'Primium',
-          //         style: TextStyle(
-          //           color: Color(0xFF3B82F6),
-          //           fontSize: 5,
-          //           fontWeight: FontWeight.w600,
-          //           letterSpacing: 0.2,
-          //         ),
-          //       ),
-          //     ),
-          //   ),
-          // ), // 프리미엄
           const SizedBox(height: 8),
           Text(
             name,
             style: TextStyle(
-              color: selected
-                  ? const Color(0xFF3B82F6)
-                  : const Color(0xFF7B8DA0),
+              color: selected ? c.primary : c.subtle,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -590,6 +573,7 @@ class _DangerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
@@ -597,7 +581,7 @@ class _DangerButton extends StatelessWidget {
         height: 58,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: const Color(0xFF0B131C),
+          color: c.inputBg,
           border: Border.all(color: const Color(0xFF7A1F26), width: 1.2),
         ),
         child: Row(

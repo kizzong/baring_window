@@ -8,6 +8,8 @@ import 'package:hive/hive.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:baring_windows/theme/app_colors.dart';
+import 'package:baring_windows/main.dart' show isDarkMode;
 import '../services/notification_service.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -56,16 +58,17 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
   // 이미지 크롭 함수
   Future<String?> _cropImage(String sourcePath) async {
+    final c = context.colors;
     final croppedFile = await ImageCropper().cropImage(
       sourcePath: sourcePath,
       aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: '프로필 사진 편집',
-          toolbarColor: const Color(0xFF0B1623),
-          toolbarWidgetColor: Colors.white,
-          backgroundColor: const Color(0xFF0B1623),
-          activeControlsWidgetColor: const Color(0xFF2D86FF),
+          toolbarColor: c.scaffoldBg,
+          toolbarWidgetColor: c.textPrimary,
+          backgroundColor: c.scaffoldBg,
+          activeControlsWidgetColor: c.primary,
           cropStyle: CropStyle.circle,
           lockAspectRatio: true,
         ),
@@ -212,9 +215,10 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
   // 이미지 선택 옵션 다이얼로그 ⭐
   Future<void> _showImageSourceDialog() async {
+    final c = context.colors;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Color(0xFF1A2332),
+      backgroundColor: c.dialogBg,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -223,16 +227,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
           child: Wrap(
             children: [
               ListTile(
-                leading: Icon(Icons.photo_library, color: Color(0xFF2F80ED)),
-                title: Text('갤러리에서 선택', style: TextStyle(color: Colors.white)),
+                leading: Icon(Icons.photo_library, color: c.primary),
+                title: Text('갤러리에서 선택', style: TextStyle(color: c.textPrimary)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickAndCropImage(ImageSource.gallery);
                 },
               ),
               ListTile(
-                leading: Icon(Icons.camera_alt, color: Color(0xFF2F80ED)),
-                title: Text('카메라로 촬영', style: TextStyle(color: Colors.white)),
+                leading: Icon(Icons.camera_alt, color: c.primary),
+                title: Text('카메라로 촬영', style: TextStyle(color: c.textPrimary)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickAndCropImage(ImageSource.camera);
@@ -350,11 +354,12 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
   // 피드백 다이얼로그 표시 ⭐
   void _showFeedbackDialog() {
+    final c = context.colors;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Color(0xFF1A2332),
+          backgroundColor: c.dialogBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -369,7 +374,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               Text(
                 '소중한 의견 감사합니다',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: c.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                 ),
@@ -383,7 +388,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               Text(
                 '아쉬운 부분이 있으셨군요.\n더 나은 서비스를 제공하기 위해 노력하겠습니다.',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.85),
+                  color: c.textPrimary.withOpacity(0.85),
                   fontSize: 15,
                   height: 1.5,
                 ),
@@ -392,9 +397,9 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               Container(
                 padding: EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
+                  color: c.borderColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  border: Border.all(color: c.textPrimary.withOpacity(0.1)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,7 +426,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                     Text(
                       '오픈채팅에서 의견을 남겨주세요!',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: c.textPrimary,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -437,7 +442,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               child: Text(
                 '닫기',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: c.textPrimary.withOpacity(0.6),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -590,6 +595,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   }
 
   Future<TimeOfDay?> _pickNotificationTime(TimeOfDay initial) async {
+    final c = context.colors;
     TimeOfDay selected = initial;
 
     final confirmed = await showModalBottomSheet<bool>(
@@ -597,9 +603,9 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF0B1623),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: c.scaffoldBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -610,7 +616,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: c.textPrimary.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -625,26 +631,26 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                       child: Text(
                         '취소',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: c.textPrimary.withOpacity(0.5),
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    const Text(
+                    Text(
                       '알림 시간 설정',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: c.textPrimary,
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(ctx, true),
-                      child: const Text(
+                      child: Text(
                         '완료',
                         style: TextStyle(
-                          color: Color(0xFF2F80ED),
+                          color: c.primary,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -702,6 +708,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     required String desc,
     required bool? granted,
   }) {
+    final c = context.colors;
     final bool isGranted = granted == true;
     final Color badgeColor = granted == null
         ? const Color(0xFF64748B)
@@ -714,9 +721,9 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       onTap: _openAppSettings,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
+          color: c.textPrimary.withOpacity(0.03),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: c.textPrimary.withOpacity(0.05)),
         ),
         padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
         child: Row(
@@ -725,10 +732,10 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF2F80ED).withValues(alpha: 0.12),
+                color: c.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: const Color(0xFF2F80ED), size: 20),
+              child: Icon(icon, color: c.primary, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -737,8 +744,8 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: c.textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
@@ -747,7 +754,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   Text(
                     desc,
                     style: TextStyle(
-                      color: const Color(0xFF7B8DA0),
+                      color: c.subtle,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -773,7 +780,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
             const SizedBox(width: 4),
             Icon(
               Icons.chevron_right_rounded,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: c.textPrimary.withOpacity(0.3),
               size: 20,
             ),
           ],
@@ -784,21 +791,18 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // const card = Color(0xFF121E2B);
-    const line = Color(0xFF263444);
-    const subtle = Color(0xFF7B8DA0);
-    const primary = Color(0xFF2F80ED);
+    final c = context.colors;
 
     return Scaffold(
-      backgroundColor: Color(0xFF0B1623),
+      backgroundColor: c.scaffoldBg,
       appBar: AppBar(
-        backgroundColor: Color(0xFF0B1623),
+        backgroundColor: c.scaffoldBg,
         centerTitle: true,
 
         title: Text(
           '프로필',
           style: TextStyle(
-            color: Colors.white,
+            color: c.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
@@ -810,7 +814,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   child: Text(
                     "완료",
                     style: TextStyle(
-                      color: Color(0xFF3B82F6),
+                      color: c.primary,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -823,7 +827,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   child: Text(
                     "완료",
                     style: TextStyle(
-                      color: Color(0xFF3B82F6),
+                      color: c.primary,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -851,7 +855,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.10),
+                            color: c.textPrimary.withOpacity(0.10),
                             width: 3,
                           ),
                         ),
@@ -863,23 +867,21 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                                   File(profileImagePath!),
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return CircleAvatar(
-                                      backgroundColor: Colors.grey.shade800,
-                                      radius: 75,
-                                      child: const Icon(
+                                    return Container(
+                                      color: c.borderColor,
+                                      child: Icon(
                                         Icons.person,
-                                        color: Colors.white70,
+                                        color: c.textSecondary,
                                         size: 100,
                                       ),
                                     );
                                   },
                                 )
-                              : CircleAvatar(
-                                  backgroundColor: Colors.grey.shade800,
-                                  radius: 75,
-                                  child: const Icon(
+                              : Container(
+                                  color: c.borderColor,
+                                  child: Icon(
                                     Icons.person,
-                                    color: Colors.white70,
+                                    color: c.textSecondary,
                                     size: 100,
                                   ),
                                 ),
@@ -889,16 +891,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: primary,
+                          color: c.primary,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Color(0xFF0B1623),
+                            color: c.scaffoldBg,
                             width: 3,
                           ),
                         ),
                         child: IconButton(
                           onPressed: _showImageSourceDialog, // 다이얼로그 호출 ⭐
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.camera_alt,
                             color: Colors.white,
                             size: 22,
@@ -916,7 +918,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   child: Text(
                     userName,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: c.textPrimary,
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                     ),
@@ -930,14 +932,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      // color: colo,
+                      color: c.textPrimary.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       'Primium',
                       style: TextStyle(
-                        color: Color(0xFF3B82F6),
+                        color: c.primary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.2,
@@ -952,7 +953,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 Text(
                   '프로필 정보',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.60),
+                    color: c.textPrimary.withOpacity(0.60),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.4,
@@ -967,7 +968,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                       Text(
                         '이름',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: c.textPrimary.withOpacity(0.85),
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
@@ -975,10 +976,10 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                       const SizedBox(height: 10),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.06),
+                          color: c.borderColor,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.08),
+                            color: c.borderColor,
                           ),
                         ),
                         padding: const EdgeInsets.symmetric(
@@ -1007,7 +1008,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                                   });
                                 },
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: c.textPrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1028,7 +1029,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                                 padding: const EdgeInsets.all(6.0),
                                 child: Icon(
                                   Icons.edit,
-                                  color: primary.withOpacity(0.95),
+                                  color: c.primary.withOpacity(0.95),
                                   size: 20,
                                 ),
                               ),
@@ -1046,7 +1047,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 Text(
                   '할일 알림',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.60),
+                    color: c.textPrimary.withOpacity(0.60),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.4,
@@ -1081,16 +1082,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                             NotificationService.cancelMorningNotification();
                           }
                         },
-                        primary: primary,
-                        subtle: subtle,
-                        line: line,
                       ),
                       // 시간 변경 버튼 (ON 상태일 때만)
                       if (morningTodoAlert) ...[
                         const SizedBox(height: 6),
                         _TimeChip(
                           time: _formatTime(morningTime),
-                          primary: primary,
+                          primary: c.primary,
                           onTap: () async {
                             final picked = await _pickNotificationTime(morningTime);
                             if (picked == null) return;
@@ -1125,16 +1123,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                             NotificationService.cancelEveningNotification();
                           }
                         },
-                        primary: primary,
-                        subtle: subtle,
-                        line: line,
                       ),
                       // 시간 변경 버튼 (ON 상태일 때만)
                       if (eveningTodoAlert) ...[
                         const SizedBox(height: 6),
                         _TimeChip(
                           time: _formatTime(eveningTime),
-                          primary: primary,
+                          primary: c.primary,
                           onTap: () async {
                             final picked = await _pickNotificationTime(eveningTime);
                             if (picked == null) return;
@@ -1155,7 +1150,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 Text(
                   '권한 설정',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.60),
+                    color: c.textPrimary.withOpacity(0.60),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.4,
@@ -1185,10 +1180,37 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
                 const SizedBox(height: 22),
 
+                // ---------- SECTION: DISPLAY SETTINGS ----------
+                Text(
+                  '화면 설정',
+                  style: TextStyle(
+                    color: c.textPrimary.withOpacity(0.60),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                _CardBox(
+                  child: _SwitchRow(
+                    title: '다크 모드',
+                    desc: '어두운 화면 테마를 사용합니다.',
+                    value: isDarkMode.value,
+                    onChanged: (v) {
+                      setState(() {});
+                      isDarkMode.value = v;
+                      baringBox.put('isDarkMode', v);
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+
                 Text(
                   '평가하기',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.60),
+                    color: c.textPrimary.withOpacity(0.60),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.4,
@@ -1203,7 +1225,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                       Text(
                         '앱이 마음에 드시나요?',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: c.textPrimary.withOpacity(0.85),
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1232,18 +1254,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.thumb_up_outlined,
-                                    // color: Color(0xFFE06A6A),
-                                    color: Colors.white,
+                                    color: c.textPrimary,
                                     size: 20,
                                   ),
                                   SizedBox(width: 8),
-                                  const Text(
+                                  Text(
                                     '좋아요!',
                                     style: TextStyle(
-                                      // color: Color(0xFFE06A6A),
-                                      color: Colors.white,
+                                      color: c.textPrimary,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -1273,16 +1293,16 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.near_me_outlined,
-                                    color: Colors.white,
+                                    color: c.textPrimary,
                                     size: 20,
                                   ),
                                   SizedBox(width: 8),
-                                  const Text(
+                                  Text(
                                     '아쉬워요..',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: c.textPrimary,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -1348,12 +1368,13 @@ class _CardBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF121E2B),
+        color: c.cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(color: c.borderColor),
       ),
       child: child,
     );
@@ -1365,27 +1386,22 @@ class _SwitchRow extends StatelessWidget {
   final String desc;
   final bool value;
   final ValueChanged<bool> onChanged;
-  final Color primary;
-  final Color subtle;
-  final Color line;
 
   const _SwitchRow({
     required this.title,
     required this.desc,
     required this.value,
     required this.onChanged,
-    required this.primary,
-    required this.subtle,
-    required this.line,
   });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: c.textPrimary.withOpacity(0.03),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: c.textPrimary.withOpacity(0.05)),
       ),
       padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
       child: Row(
@@ -1396,8 +1412,8 @@ class _SwitchRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: c.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1406,7 +1422,7 @@ class _SwitchRow extends StatelessWidget {
                 Text(
                   desc,
                   style: TextStyle(
-                    color: subtle,
+                    color: c.subtle,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     height: 1.25,
@@ -1419,9 +1435,9 @@ class _SwitchRow extends StatelessWidget {
             value: value,
             onChanged: onChanged,
             activeColor: Colors.white,
-            activeTrackColor: primary,
-            inactiveThumbColor: Colors.white.withValues(alpha: 0.9),
-            inactiveTrackColor: Colors.white.withValues(alpha: 0.20),
+            activeTrackColor: c.primary,
+            inactiveThumbColor: c.textPrimary.withOpacity(0.9),
+            inactiveTrackColor: c.textPrimary.withOpacity(0.20),
           ),
         ],
       ),

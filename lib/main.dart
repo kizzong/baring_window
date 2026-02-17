@@ -8,11 +8,15 @@ import 'package:baring_windows/pages/todo_page.dart';
 import 'package:baring_windows/pages/profile_page.dart';
 // import 'package:baring_windows/pages/dday_settings_page.dart';
 import 'package:baring_windows/services/notification_service.dart';
+import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/date_symbol_data_local.dart';
+
+/// 전역 다크모드 상태
+final ValueNotifier<bool> isDarkMode = ValueNotifier<bool>(true);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +25,10 @@ void main() async {
   await Hive.initFlutter();
 
   await Hive.openBox('baring');
+
+  // Hive에서 다크모드 설정 로드
+  final box = Hive.box('baring');
+  isDarkMode.value = box.get('isDarkMode', defaultValue: true);
 
   // iOS App Group 설정 (위젯과 앱 간 데이터 공유에 필수) ⭐
   if (Platform.isIOS) {
@@ -53,22 +61,30 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     final hasSeenOnboarding = OnboardingService.hasSeenOnboarding();
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        fontFamily: null,
-        scaffoldBackgroundColor: Color(0xFF0B1623),
-      ),
-      localizationsDelegates: [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: [const Locale('ko', 'KR')],
-      home: hasSeenOnboarding
-          ? const MainAppScreen()
-          : const OnboardingPage(),
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkMode,
+      builder: (context, dark, _) {
+        final appColors = dark ? AppColors.dark : AppColors.light;
+
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: dark ? Brightness.dark : Brightness.light,
+            fontFamily: null,
+            scaffoldBackgroundColor: appColors.scaffoldBg,
+            extensions: [appColors],
+          ),
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [const Locale('ko', 'KR')],
+          home: hasSeenOnboarding
+              ? const MainAppScreen()
+              : const OnboardingPage(),
+        );
+      },
     );
   }
 }
@@ -116,6 +132,8 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+
     return Scaffold(
       body: PageView(
         controller: _pageController,
@@ -128,8 +146,9 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
       ),
 
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Color(0xFF0B1623),
-        selectedItemColor: Colors.white,
+        backgroundColor: c.bottomNavBg,
+        selectedItemColor: c.textPrimary,
+        unselectedItemColor: c.textSecondary,
         currentIndex: _selectedIndex,
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),

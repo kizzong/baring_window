@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:baring_windows/services/notification_service.dart';
 import 'package:baring_windows/services/widget_service.dart';
+import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -167,6 +168,7 @@ class _TodoPageState extends State<TodoPage> {
 
     // 알림이 있는 할 일을 완료 체크하는 경우 → 확인 다이얼로그 (시간이 지났으면 바로 완료 처리)
     if (!isDone && hasNotification && !isTimePassed) {
+      final c = context.colors;
       final notifyBefore = todo['notifyBefore'] as int;
       final notifyLabel = notifyBefore >= 60
           ? '${notifyBefore ~/ 60}시간 전'
@@ -175,14 +177,14 @@ class _TodoPageState extends State<TodoPage> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1A2332),
+          backgroundColor: c.dialogBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text(
+          title: Text(
             '할 일 완료',
             style: TextStyle(
-              color: Colors.white,
+              color: c.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 18,
             ),
@@ -191,7 +193,7 @@ class _TodoPageState extends State<TodoPage> {
             '${todo['time']} ${todo['title']}\n\n'
             '설정된 알림($notifyLabel)이 취소됩니다.\n완료 처리하시겠습니까?',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: c.textSecondary,
               fontSize: 14,
               height: 1.5,
             ),
@@ -201,7 +203,7 @@ class _TodoPageState extends State<TodoPage> {
               onPressed: () => Navigator.pop(ctx),
               child: Text(
                 '취소',
-                style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                style: TextStyle(color: c.textPrimary.withOpacity(0.5)),
               ),
             ),
             TextButton(
@@ -213,10 +215,10 @@ class _TodoPageState extends State<TodoPage> {
                 setState(() {});
                 _sheetStateSetter?.call(() {});
               },
-              child: const Text(
+              child: Text(
                 '완료',
                 style: TextStyle(
-                  color: Color(0xFF2D86FF),
+                  color: c.primary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -255,6 +257,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _deleteTodo(int index) {
+    final c = context.colors;
     final key = _dayKey(_selectedDay);
     if (_todos[key] == null || index >= _todos[key]!.length) return;
     final todo = _todos[key]![index];
@@ -262,17 +265,17 @@ class _TodoPageState extends State<TodoPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A2332),
+        backgroundColor: c.dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('할 일 삭제', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text('할 일 삭제', style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
         content: Text(
           '"${todo['title']}" 할 일을 삭제하시겠습니까?',
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+          style: TextStyle(color: c.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+            child: Text('취소', style: TextStyle(color: c.textPrimary.withOpacity(0.5))),
           ),
           TextButton(
             onPressed: () {
@@ -287,6 +290,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _performDeleteTodo(int index) {
+    final c = context.colors;
     final key = _dayKey(_selectedDay);
     if (_todos[key] != null && index < _todos[key]!.length) {
       final removed = _todos[key]!.removeAt(index);
@@ -307,9 +311,9 @@ class _TodoPageState extends State<TodoPage> {
         SnackBar(
           content: Text(
             '"${removed['title']}" 삭제됨',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.white60,
+              color: c.textSecondary,
             ),
           ),
           behavior: SnackBarBehavior.floating,
@@ -317,11 +321,11 @@ class _TodoPageState extends State<TodoPage> {
             borderRadius: BorderRadius.circular(12),
           ),
           margin: const EdgeInsets.all(16),
-          backgroundColor: const Color(0xFF1A2332),
+          backgroundColor: c.dialogBg,
           duration: const Duration(seconds: 2),
           action: SnackBarAction(
             label: '되돌리기',
-            textColor: const Color(0xFF2D86FF),
+            textColor: c.primary,
             onPressed: () {
               final key = _dayKey(_selectedDay);
               _todos.putIfAbsent(key, () => []);
@@ -508,6 +512,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _deleteRoutine(int routineIndex) {
+    final c = context.colors;
     final routinesForDay = _getRoutinesForDay(_selectedDay);
     if (routineIndex >= routinesForDay.length) return;
     final routine = routinesForDay[routineIndex];
@@ -515,17 +520,17 @@ class _TodoPageState extends State<TodoPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A2332),
+        backgroundColor: c.dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('루틴 삭제', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text('루틴 삭제', style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
         content: Text(
           '"${routine['title']}" 루틴을 삭제하시겠습니까?',
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+          style: TextStyle(color: c.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('취소', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+            child: Text('취소', style: TextStyle(color: c.textPrimary.withOpacity(0.5))),
           ),
           TextButton(
             onPressed: () {
@@ -540,6 +545,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _performDeleteRoutine(int routineIndex) {
+    final c = context.colors;
     final routinesForDay = _getRoutinesForDay(_selectedDay);
     if (routineIndex >= routinesForDay.length) return;
 
@@ -562,9 +568,9 @@ class _TodoPageState extends State<TodoPage> {
       SnackBar(
         content: Text(
           '"${removed['title']}" 루틴 삭제됨',
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: Colors.white60,
+            color: c.textSecondary,
           ),
         ),
         behavior: SnackBarBehavior.floating,
@@ -572,11 +578,11 @@ class _TodoPageState extends State<TodoPage> {
           borderRadius: BorderRadius.circular(12),
         ),
         margin: const EdgeInsets.all(16),
-        backgroundColor: const Color(0xFF1A2332),
+        backgroundColor: c.dialogBg,
         duration: const Duration(seconds: 2),
         action: SnackBarAction(
           label: '되돌리기',
-          textColor: const Color(0xFF2D86FF),
+          textColor: c.primary,
           onPressed: () {
             _routines.insert(globalIndex, removed);
             _saveRoutines();
@@ -644,6 +650,7 @@ class _TodoPageState extends State<TodoPage> {
   // ── 다이얼로그 ──
 
   void _showAddDialog() {
+    final c = context.colors;
     final controller = TextEditingController();
     final focusNode = FocusNode();
     TimeOfDay? selectedTime;
@@ -686,14 +693,14 @@ class _TodoPageState extends State<TodoPage> {
             return GestureDetector(
               onTap: () => focusNode.unfocus(),
               child: AlertDialog(
-              backgroundColor: const Color(0xFF1A2332),
+              backgroundColor: c.dialogBg,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              title: const Text(
+              title: Text(
                 '할 일 추가',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: c.textPrimary,
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
                 ),
@@ -708,19 +715,19 @@ class _TodoPageState extends State<TodoPage> {
                       focusNode: focusNode,
                       autofocus: true,
                       maxLength: 20,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: c.textPrimary),
                       decoration: InputDecoration(
                         hintText: '할 일을 입력하세요',
                         hintStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                            TextStyle(color: c.textPrimary.withOpacity(0.4)),
                         counterStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                            TextStyle(color: c.textPrimary.withOpacity(0.4)),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
-                              color: Colors.white.withOpacity(0.15)),
+                              color: c.textPrimary.withOpacity(0.15)),
                         ),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFF2D86FF)),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: c.primary),
                         ),
                       ),
                       onEditingComplete: () => focusNode.unfocus(),
@@ -760,15 +767,15 @@ class _TodoPageState extends State<TodoPage> {
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(
                     '취소',
-                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                    style: TextStyle(color: c.textPrimary.withOpacity(0.5)),
                   ),
                 ),
                 TextButton(
                   onPressed: submit,
-                  child: const Text(
+                  child: Text(
                     '추가',
                     style: TextStyle(
-                      color: Color(0xFF2D86FF),
+                      color: c.primary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -783,6 +790,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _showAddRoutineDialog() {
+    final c = context.colors;
     final controller = TextEditingController();
     final focusNode = FocusNode();
     String routineType = 'daily';
@@ -831,14 +839,14 @@ class _TodoPageState extends State<TodoPage> {
             return GestureDetector(
               onTap: () => focusNode.unfocus(),
               child: AlertDialog(
-              backgroundColor: const Color(0xFF1A2332),
+              backgroundColor: c.dialogBg,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              title: const Text(
+              title: Text(
                 '루틴 추가',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: c.textPrimary,
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
                 ),
@@ -854,19 +862,19 @@ class _TodoPageState extends State<TodoPage> {
                       focusNode: focusNode,
                       autofocus: true,
                       maxLength: 20,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: c.textPrimary),
                       decoration: InputDecoration(
                         hintText: '루틴 이름을 입력하세요',
                         hintStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                            TextStyle(color: c.textPrimary.withOpacity(0.4)),
                         counterStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                            TextStyle(color: c.textPrimary.withOpacity(0.4)),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
-                              color: Colors.white.withOpacity(0.15)),
+                              color: c.textPrimary.withOpacity(0.15)),
                         ),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFF2D86FF)),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: c.primary),
                         ),
                       ),
                       onEditingComplete: () => focusNode.unfocus(),
@@ -877,7 +885,7 @@ class _TodoPageState extends State<TodoPage> {
                     Text(
                       '반복',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
+                        color: c.textPrimary.withOpacity(0.6),
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
@@ -897,13 +905,13 @@ class _TodoPageState extends State<TodoPage> {
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: routineType == 'daily'
-                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? c.primary.withOpacity(0.2)
+                                    : c.textPrimary.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: routineType == 'daily'
-                                      ? const Color(0xFF2D86FF)
-                                      : Colors.white.withOpacity(0.1),
+                                      ? c.primary
+                                      : c.textPrimary.withOpacity(0.1),
                                 ),
                               ),
                               child: Center(
@@ -911,8 +919,8 @@ class _TodoPageState extends State<TodoPage> {
                                   '매일',
                                   style: TextStyle(
                                     color: routineType == 'daily'
-                                        ? const Color(0xFF2D86FF)
-                                        : Colors.white.withOpacity(0.6),
+                                        ? c.primary
+                                        : c.textPrimary.withOpacity(0.6),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 14,
                                   ),
@@ -931,13 +939,13 @@ class _TodoPageState extends State<TodoPage> {
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: routineType == 'weekly'
-                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? c.primary.withOpacity(0.2)
+                                    : c.textPrimary.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: routineType == 'weekly'
-                                      ? const Color(0xFF2D86FF)
-                                      : Colors.white.withOpacity(0.1),
+                                      ? c.primary
+                                      : c.textPrimary.withOpacity(0.1),
                                 ),
                               ),
                               child: Center(
@@ -945,8 +953,8 @@ class _TodoPageState extends State<TodoPage> {
                                   '특정 요일',
                                   style: TextStyle(
                                     color: routineType == 'weekly'
-                                        ? const Color(0xFF2D86FF)
-                                        : Colors.white.withOpacity(0.6),
+                                        ? c.primary
+                                        : c.textPrimary.withOpacity(0.6),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 14,
                                   ),
@@ -981,13 +989,13 @@ class _TodoPageState extends State<TodoPage> {
                               height: 34,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? const Color(0xFF2D86FF)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? c.primary
+                                    : c.textPrimary.withOpacity(0.05),
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isSelected
                                       ? Colors.transparent
-                                      : Colors.white.withOpacity(0.1),
+                                      : c.textPrimary.withOpacity(0.1),
                                 ),
                               ),
                               child: Center(
@@ -996,7 +1004,7 @@ class _TodoPageState extends State<TodoPage> {
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white
-                                        : Colors.white.withOpacity(0.5),
+                                        : c.textPrimary.withOpacity(0.5),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
@@ -1043,15 +1051,15 @@ class _TodoPageState extends State<TodoPage> {
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(
                     '취소',
-                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                    style: TextStyle(color: c.textPrimary.withOpacity(0.5)),
                   ),
                 ),
                 TextButton(
                   onPressed: submit,
-                  child: const Text(
+                  child: Text(
                     '추가',
                     style: TextStyle(
-                      color: Color(0xFF2D86FF),
+                      color: c.primary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1066,6 +1074,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _showEditTodoDialog(int index) {
+    final c = context.colors;
     final key = _dayKey(_selectedDay);
     if (_todos[key] == null || index >= _todos[key]!.length) return;
     final todo = _todos[key]![index];
@@ -1120,14 +1129,14 @@ class _TodoPageState extends State<TodoPage> {
             return GestureDetector(
               onTap: () => focusNode.unfocus(),
               child: AlertDialog(
-              backgroundColor: const Color(0xFF1A2332),
+              backgroundColor: c.dialogBg,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              title: const Text(
+              title: Text(
                 '할 일 수정',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: c.textPrimary,
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
                 ),
@@ -1142,19 +1151,19 @@ class _TodoPageState extends State<TodoPage> {
                       focusNode: focusNode,
                       autofocus: true,
                       maxLength: 20,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: c.textPrimary),
                       decoration: InputDecoration(
                         hintText: '할 일을 입력하세요',
                         hintStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                            TextStyle(color: c.textPrimary.withOpacity(0.4)),
                         counterStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                            TextStyle(color: c.textPrimary.withOpacity(0.4)),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
-                              color: Colors.white.withOpacity(0.15)),
+                              color: c.textPrimary.withOpacity(0.15)),
                         ),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFF2D86FF)),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: c.primary),
                         ),
                       ),
                       onEditingComplete: () => focusNode.unfocus(),
@@ -1190,15 +1199,15 @@ class _TodoPageState extends State<TodoPage> {
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(
                     '취소',
-                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                    style: TextStyle(color: c.textPrimary.withOpacity(0.5)),
                   ),
                 ),
                 TextButton(
                   onPressed: submit,
-                  child: const Text(
+                  child: Text(
                     '수정',
                     style: TextStyle(
-                      color: Color(0xFF2D86FF),
+                      color: c.primary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1213,6 +1222,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _showEditRoutineDialog(int routineIndex) {
+    final c = context.colors;
     final routinesForDay = _getRoutinesForDay(_selectedDay);
     if (routineIndex >= routinesForDay.length) return;
     final routine = routinesForDay[routineIndex];
@@ -1273,14 +1283,14 @@ class _TodoPageState extends State<TodoPage> {
             return GestureDetector(
               onTap: () => focusNode.unfocus(),
               child: AlertDialog(
-              backgroundColor: const Color(0xFF1A2332),
+              backgroundColor: c.dialogBg,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              title: const Text(
+              title: Text(
                 '루틴 수정',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: c.textPrimary,
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
                 ),
@@ -1295,19 +1305,19 @@ class _TodoPageState extends State<TodoPage> {
                       focusNode: focusNode,
                       autofocus: true,
                       maxLength: 20,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: c.textPrimary),
                       decoration: InputDecoration(
                         hintText: '루틴 이름을 입력하세요',
                         hintStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                            TextStyle(color: c.textPrimary.withOpacity(0.4)),
                         counterStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.4)),
+                            TextStyle(color: c.textPrimary.withOpacity(0.4)),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
-                              color: Colors.white.withOpacity(0.15)),
+                              color: c.textPrimary.withOpacity(0.15)),
                         ),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFF2D86FF)),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: c.primary),
                         ),
                       ),
                       onEditingComplete: () => focusNode.unfocus(),
@@ -1316,7 +1326,7 @@ class _TodoPageState extends State<TodoPage> {
                     Text(
                       '반복',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
+                        color: c.textPrimary.withOpacity(0.6),
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
@@ -1336,13 +1346,13 @@ class _TodoPageState extends State<TodoPage> {
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: routineType == 'daily'
-                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? c.primary.withOpacity(0.2)
+                                    : c.textPrimary.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: routineType == 'daily'
-                                      ? const Color(0xFF2D86FF)
-                                      : Colors.white.withOpacity(0.1),
+                                      ? c.primary
+                                      : c.textPrimary.withOpacity(0.1),
                                 ),
                               ),
                               child: Center(
@@ -1350,8 +1360,8 @@ class _TodoPageState extends State<TodoPage> {
                                   '매일',
                                   style: TextStyle(
                                     color: routineType == 'daily'
-                                        ? const Color(0xFF2D86FF)
-                                        : Colors.white.withOpacity(0.6),
+                                        ? c.primary
+                                        : c.textPrimary.withOpacity(0.6),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 14,
                                   ),
@@ -1370,13 +1380,13 @@ class _TodoPageState extends State<TodoPage> {
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: routineType == 'weekly'
-                                    ? const Color(0xFF2D86FF).withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? c.primary.withOpacity(0.2)
+                                    : c.textPrimary.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: routineType == 'weekly'
-                                      ? const Color(0xFF2D86FF)
-                                      : Colors.white.withOpacity(0.1),
+                                      ? c.primary
+                                      : c.textPrimary.withOpacity(0.1),
                                 ),
                               ),
                               child: Center(
@@ -1384,8 +1394,8 @@ class _TodoPageState extends State<TodoPage> {
                                   '특정 요일',
                                   style: TextStyle(
                                     color: routineType == 'weekly'
-                                        ? const Color(0xFF2D86FF)
-                                        : Colors.white.withOpacity(0.6),
+                                        ? c.primary
+                                        : c.textPrimary.withOpacity(0.6),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 14,
                                   ),
@@ -1418,13 +1428,13 @@ class _TodoPageState extends State<TodoPage> {
                               height: 34,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? const Color(0xFF2D86FF)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? c.primary
+                                    : c.textPrimary.withOpacity(0.05),
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isSelected
                                       ? Colors.transparent
-                                      : Colors.white.withOpacity(0.1),
+                                      : c.textPrimary.withOpacity(0.1),
                                 ),
                               ),
                               child: Center(
@@ -1433,7 +1443,7 @@ class _TodoPageState extends State<TodoPage> {
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white
-                                        : Colors.white.withOpacity(0.5),
+                                        : c.textPrimary.withOpacity(0.5),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
@@ -1475,15 +1485,15 @@ class _TodoPageState extends State<TodoPage> {
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(
                     '취소',
-                    style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                    style: TextStyle(color: c.textPrimary.withOpacity(0.5)),
                   ),
                 ),
                 TextButton(
                   onPressed: submit,
-                  child: const Text(
+                  child: Text(
                     '수정',
                     style: TextStyle(
-                      color: Color(0xFF2D86FF),
+                      color: c.primary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1504,6 +1514,7 @@ class _TodoPageState extends State<TodoPage> {
     required void Function(TimeOfDay) onTimeSelected,
     required VoidCallback onTimeClear,
   }) {
+    final c = context.colors;
     return GestureDetector(
       onTap: () async {
         DateTime tempTime = DateTime(
@@ -1516,9 +1527,9 @@ class _TodoPageState extends State<TodoPage> {
           builder: (pickerCtx) {
             return Container(
               height: 300,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1A2332),
-                borderRadius: BorderRadius.vertical(
+              decoration: BoxDecoration(
+                color: c.dialogBg,
+                borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
               ),
@@ -1536,7 +1547,7 @@ class _TodoPageState extends State<TodoPage> {
                           child: Text(
                             '취소',
                             style: TextStyle(
-                              color: Colors.white
+                              color: c.textPrimary
                                   .withOpacity(0.5),
                               fontSize: 16,
                             ),
@@ -1546,10 +1557,10 @@ class _TodoPageState extends State<TodoPage> {
                         ),
                         CupertinoButton(
                           padding: EdgeInsets.zero,
-                          child: const Text(
+                          child: Text(
                             '확인',
                             style: TextStyle(
-                              color: Color(0xFF2D86FF),
+                              color: c.primary,
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
                             ),
@@ -1604,12 +1615,12 @@ class _TodoPageState extends State<TodoPage> {
         padding: const EdgeInsets.symmetric(
             horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: c.textPrimary.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selectedTime != null
-                ? const Color(0xFF2D86FF).withOpacity(0.5)
-                : Colors.white.withOpacity(0.1),
+                ? c.primary.withOpacity(0.5)
+                : c.textPrimary.withOpacity(0.1),
           ),
         ),
         child: Row(
@@ -1618,8 +1629,8 @@ class _TodoPageState extends State<TodoPage> {
               Icons.access_time_rounded,
               size: 20,
               color: selectedTime != null
-                  ? const Color(0xFF2D86FF)
-                  : Colors.white.withOpacity(0.4),
+                  ? c.primary
+                  : c.textPrimary.withOpacity(0.4),
             ),
             const SizedBox(width: 10),
             Text(
@@ -1628,8 +1639,8 @@ class _TodoPageState extends State<TodoPage> {
                   : '시간 선택 (선택사항)',
               style: TextStyle(
                 color: selectedTime != null
-                    ? Colors.white
-                    : Colors.white.withOpacity(0.4),
+                    ? c.textPrimary
+                    : c.textPrimary.withOpacity(0.4),
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -1641,7 +1652,7 @@ class _TodoPageState extends State<TodoPage> {
                 child: Icon(
                   Icons.close,
                   size: 18,
-                  color: Colors.white.withOpacity(0.4),
+                  color: c.textPrimary.withOpacity(0.4),
                 ),
               ),
           ],
@@ -1655,13 +1666,14 @@ class _TodoPageState extends State<TodoPage> {
     required int? selectedNotifyBefore,
     required void Function(int?) onSelected,
   }) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '알림',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: c.textPrimary.withOpacity(0.6),
             fontWeight: FontWeight.w600,
             fontSize: 13,
           ),
@@ -1680,21 +1692,21 @@ class _TodoPageState extends State<TodoPage> {
                     horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF2D86FF).withOpacity(0.2)
-                      : Colors.white.withOpacity(0.05),
+                      ? c.primary.withOpacity(0.2)
+                      : c.textPrimary.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isSelected
-                        ? const Color(0xFF2D86FF)
-                        : Colors.white.withOpacity(0.1),
+                        ? c.primary
+                        : c.textPrimary.withOpacity(0.1),
                   ),
                 ),
                 child: Text(
                   option['label'] as String,
                   style: TextStyle(
                     color: isSelected
-                        ? const Color(0xFF2D86FF)
-                        : Colors.white.withOpacity(0.6),
+                        ? c.primary
+                        : c.textPrimary.withOpacity(0.6),
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -1731,6 +1743,7 @@ class _TodoPageState extends State<TodoPage> {
     required bool isToday,
     bool isWeekend = false,
   }) {
+    final c = context.colors;
     final todos = _getTodosForDay(day);
     final routines = _getRoutinesForDay(day);
 
@@ -1749,33 +1762,33 @@ class _TodoPageState extends State<TodoPage> {
         title: t['title'] ?? '',
         time: t['time'] as String?,
         hasAlarm: t['notifyBefore'] != null,
-        color: const Color(0xFF2D86FF),
+        color: c.primary,
       ));
     }
 
     // 날짜 텍스트 스타일
     final TextStyle dateTextStyle;
     if (isSelected) {
-      dateTextStyle = const TextStyle(
-        color: Colors.white,
+      dateTextStyle = TextStyle(
+        color: c.textPrimary,
         fontWeight: FontWeight.w700,
         fontSize: 14,
       );
     } else if (isToday) {
-      dateTextStyle = const TextStyle(
-        color: Colors.white,
+      dateTextStyle = TextStyle(
+        color: c.textPrimary,
         fontWeight: FontWeight.w700,
         fontSize: 14,
       );
     } else if (isWeekend) {
       dateTextStyle = TextStyle(
-        color: Colors.white.withOpacity(0.7),
+        color: c.textSecondary,
         fontWeight: FontWeight.w600,
         fontSize: 14,
       );
     } else {
-      dateTextStyle = const TextStyle(
-        color: Colors.white,
+      dateTextStyle = TextStyle(
+        color: c.textPrimary,
         fontWeight: FontWeight.w600,
         fontSize: 14,
       );
@@ -1784,13 +1797,13 @@ class _TodoPageState extends State<TodoPage> {
     // 날짜 원형 배경
     BoxDecoration? dateDecoration;
     if (isSelected) {
-      dateDecoration = const BoxDecoration(
-        color: Color(0xFF2D86FF),
+      dateDecoration = BoxDecoration(
+        color: c.primary,
         shape: BoxShape.circle,
       );
     } else if (isToday) {
       dateDecoration = BoxDecoration(
-        color: const Color(0xFF2D86FF).withOpacity(0.3),
+        color: c.primary.withOpacity(0.3),
         shape: BoxShape.circle,
       );
     }
@@ -1871,7 +1884,7 @@ class _TodoPageState extends State<TodoPage> {
                 style: TextStyle(
                   fontSize: 8,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white.withOpacity(0.4),
+                  color: c.textPrimary.withOpacity(0.4),
                   height: 1.2,
                 ),
               ),
@@ -1882,10 +1895,11 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _showDayDetailSheet() {
+    final c = context.colors;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0B1623),
+      backgroundColor: c.scaffoldBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1914,7 +1928,7 @@ class _TodoPageState extends State<TodoPage> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
+                      color: c.textPrimary.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1947,18 +1961,18 @@ class _TodoPageState extends State<TodoPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                             child: Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.repeat_rounded,
-                                  color: Colors.white,
+                                  color: c.textPrimary,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 6),
-                                const Text(
+                                Text(
                                   '루틴',
                                   style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w800,
-                                    color: Colors.white,
+                                    color: c.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -1968,13 +1982,13 @@ class _TodoPageState extends State<TodoPage> {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF2D86FF).withOpacity(0.15),
+                                    color: c.primary.withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
                                     '$routineDoneCount/${routinesForDay.length}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF2D86FF),
+                                    style: TextStyle(
+                                      color: c.primary,
                                       fontWeight: FontWeight.w700,
                                       fontSize: 13,
                                     ),
@@ -2009,10 +2023,10 @@ class _TodoPageState extends State<TodoPage> {
                                   child: Container(
                                     padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF121E2B),
+                                      color: c.cardBg,
                                       borderRadius: BorderRadius.circular(18),
                                       border: Border.all(
-                                        color: Colors.white.withOpacity(0.07),
+                                        color: c.borderColor,
                                       ),
                                     ),
                                     child: Row(
@@ -2027,8 +2041,8 @@ class _TodoPageState extends State<TodoPage> {
                                                 Icons.repeat_rounded,
                                                 size: 18,
                                                 color: isDone
-                                                    ? Colors.white.withOpacity(0.3)
-                                                    : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                    ? c.textPrimary.withOpacity(0.3)
+                                                    : c.primary.withOpacity(0.7),
                                               ),
                                               const SizedBox(width: 8),
                                               Container(
@@ -2036,13 +2050,13 @@ class _TodoPageState extends State<TodoPage> {
                                                 width: 26,
                                                 decoration: BoxDecoration(
                                                   color: isDone
-                                                      ? const Color(0xFF2D86FF)
+                                                      ? c.primary
                                                       : Colors.transparent,
                                                   borderRadius: BorderRadius.circular(8),
                                                   border: Border.all(
                                                     color: isDone
                                                         ? Colors.transparent
-                                                        : Colors.white.withOpacity(0.18),
+                                                        : c.textPrimary.withOpacity(0.18),
                                                     width: 1.6,
                                                   ),
                                                 ),
@@ -2073,8 +2087,8 @@ class _TodoPageState extends State<TodoPage> {
                                                       ? TextDecoration.lineThrough
                                                       : null,
                                                   color: isDone
-                                                      ? Colors.white.withOpacity(0.45)
-                                                      : Colors.white,
+                                                      ? c.textPrimary.withOpacity(0.45)
+                                                      : c.textPrimary,
                                                 ),
                                               ),
                                               const SizedBox(height: 4),
@@ -2084,8 +2098,8 @@ class _TodoPageState extends State<TodoPage> {
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                   color: isDone
-                                                      ? Colors.white.withOpacity(0.3)
-                                                      : Colors.white.withOpacity(0.5),
+                                                      ? c.textPrimary.withOpacity(0.3)
+                                                      : c.textPrimary.withOpacity(0.5),
                                                 ),
                                               ),
                                             ],
@@ -2096,7 +2110,7 @@ class _TodoPageState extends State<TodoPage> {
                                           icon: Icon(
                                             Icons.close,
                                             size: 18,
-                                            color: Colors.white.withOpacity(0.3),
+                                            color: c.textPrimary.withOpacity(0.3),
                                           ),
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(
@@ -2119,18 +2133,18 @@ class _TodoPageState extends State<TodoPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.task_alt_rounded,
-                                color: Colors.white,
+                                color: c.textPrimary,
                                 size: 20,
                               ),
                               const SizedBox(width: 6),
-                              const Text(
+                              Text(
                                 '할 일',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: c.textPrimary,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -2141,13 +2155,13 @@ class _TodoPageState extends State<TodoPage> {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF2D86FF).withOpacity(0.15),
+                                    color: c.primary.withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
                                     '${todosForDay.where((t) => t['done'] == true).length}/${todosForDay.length}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF2D86FF),
+                                    style: TextStyle(
+                                      color: c.primary,
                                       fontWeight: FontWeight.w700,
                                       fontSize: 13,
                                     ),
@@ -2156,9 +2170,9 @@ class _TodoPageState extends State<TodoPage> {
                               const Spacer(),
                               IconButton(
                                 onPressed: _showAddDialog,
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.add,
-                                  color: Color(0xFF2D86FF),
+                                  color: c.primary,
                                   size: 25,
                                 ),
                               ),
@@ -2171,17 +2185,17 @@ class _TodoPageState extends State<TodoPage> {
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF121E2B),
+                              color: c.cardBg,
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.07),
+                                color: c.borderColor,
                               ),
                             ),
                             child: Center(
                               child: Text(
                                 '할 일이 없습니다',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: c.textPrimary.withOpacity(0.3),
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -2216,10 +2230,10 @@ class _TodoPageState extends State<TodoPage> {
                                   child: Container(
                                     padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF121E2B),
+                                      color: c.cardBg,
                                       borderRadius: BorderRadius.circular(18),
                                       border: Border.all(
-                                        color: Colors.white.withOpacity(0.07),
+                                        color: c.borderColor,
                                       ),
                                     ),
                                     child: Row(
@@ -2232,13 +2246,13 @@ class _TodoPageState extends State<TodoPage> {
                                             width: 26,
                                             decoration: BoxDecoration(
                                               color: isDone
-                                                  ? const Color(0xFF2D86FF)
+                                                  ? c.primary
                                                   : Colors.transparent,
                                               borderRadius: BorderRadius.circular(8),
                                               border: Border.all(
                                                 color: isDone
                                                     ? Colors.transparent
-                                                    : Colors.white.withOpacity(0.18),
+                                                    : c.textPrimary.withOpacity(0.18),
                                                 width: 1.6,
                                               ),
                                             ),
@@ -2267,8 +2281,8 @@ class _TodoPageState extends State<TodoPage> {
                                                       ? TextDecoration.lineThrough
                                                       : null,
                                                   color: isDone
-                                                      ? Colors.white.withOpacity(0.45)
-                                                      : Colors.white,
+                                                      ? c.textPrimary.withOpacity(0.45)
+                                                      : c.textPrimary,
                                                 ),
                                               ),
                                               if (timeStr != null) ...[
@@ -2279,8 +2293,8 @@ class _TodoPageState extends State<TodoPage> {
                                                       Icons.access_time_rounded,
                                                       size: 13,
                                                       color: isDone
-                                                          ? Colors.white.withOpacity(0.3)
-                                                          : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                          ? c.textPrimary.withOpacity(0.3)
+                                                          : c.primary.withOpacity(0.7),
                                                     ),
                                                     const SizedBox(width: 4),
                                                     Text(
@@ -2289,8 +2303,8 @@ class _TodoPageState extends State<TodoPage> {
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w600,
                                                         color: isDone
-                                                            ? Colors.white.withOpacity(0.3)
-                                                            : const Color(0xFF2D86FF).withOpacity(0.7),
+                                                            ? c.textPrimary.withOpacity(0.3)
+                                                            : c.primary.withOpacity(0.7),
                                                       ),
                                                     ),
                                                     if (notifyBefore != null) ...[
@@ -2299,8 +2313,8 @@ class _TodoPageState extends State<TodoPage> {
                                                         Icons.notifications_active_outlined,
                                                         size: 13,
                                                         color: isDone
-                                                            ? Colors.white.withOpacity(0.3)
-                                                            : Colors.white.withOpacity(0.4),
+                                                            ? c.textPrimary.withOpacity(0.3)
+                                                            : c.textPrimary.withOpacity(0.4),
                                                       ),
                                                       const SizedBox(width: 2),
                                                       Text(
@@ -2311,8 +2325,8 @@ class _TodoPageState extends State<TodoPage> {
                                                           fontSize: 11,
                                                           fontWeight: FontWeight.w500,
                                                           color: isDone
-                                                              ? Colors.white.withOpacity(0.3)
-                                                              : Colors.white.withOpacity(0.4),
+                                                              ? c.textPrimary.withOpacity(0.3)
+                                                              : c.textPrimary.withOpacity(0.4),
                                                         ),
                                                       ),
                                                     ],
@@ -2327,7 +2341,7 @@ class _TodoPageState extends State<TodoPage> {
                                           icon: Icon(
                                             Icons.close,
                                             size: 18,
-                                            color: Colors.white.withOpacity(0.3),
+                                            color: c.textPrimary.withOpacity(0.3),
                                           ),
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(
@@ -2360,10 +2374,11 @@ class _TodoPageState extends State<TodoPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1623),
+      backgroundColor: c.scaffoldBg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0B1623),
+        backgroundColor: c.scaffoldBg,
         centerTitle: true,
         elevation: 0,
         title: const Text(
@@ -2377,25 +2392,25 @@ class _TodoPageState extends State<TodoPage> {
               margin: const EdgeInsets.only(right: 16),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF2D86FF).withOpacity(0.15),
+                color: c.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFF2D86FF).withOpacity(0.3),
+                  color: c.primary.withOpacity(0.3),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.repeat_rounded,
-                    color: Color(0xFF2D86FF),
+                    color: c.primary,
                     size: 16,
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
                     '루틴 추가',
                     style: TextStyle(
-                      color: Color(0xFF2D86FF),
+                      color: c.primary,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -2466,28 +2481,28 @@ class _TodoPageState extends State<TodoPage> {
             calendarStyle: CalendarStyle(
               outsideDaysVisible: false,
               cellMargin: const EdgeInsets.all(1),
-              defaultTextStyle: const TextStyle(
-                color: Colors.white,
+              defaultTextStyle: TextStyle(
+                color: c.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
-              weekendTextStyle: const TextStyle(
-                color: Colors.white70,
+              weekendTextStyle: TextStyle(
+                color: c.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
               todayDecoration: BoxDecoration(
-                color: const Color(0xFF2D86FF).withOpacity(0.3),
+                color: c.primary.withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
-              todayTextStyle: const TextStyle(
-                color: Colors.white,
+              todayTextStyle: TextStyle(
+                color: c.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
-              selectedDecoration: const BoxDecoration(
-                color: Color(0xFF2D86FF),
+              selectedDecoration: BoxDecoration(
+                color: c.primary,
                 shape: BoxShape.circle,
               ),
-              selectedTextStyle: const TextStyle(
-                color: Colors.white,
+              selectedTextStyle: TextStyle(
+                color: c.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
               markersMaxCount: 0,
@@ -2495,28 +2510,28 @@ class _TodoPageState extends State<TodoPage> {
             headerStyle: HeaderStyle(
               formatButtonVisible: false,
               titleCentered: true,
-              titleTextStyle: const TextStyle(
-                color: Colors.white,
+              titleTextStyle: TextStyle(
+                color: c.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
-              leftChevronIcon: const Icon(
+              leftChevronIcon: Icon(
                 Icons.chevron_left,
-                color: Colors.white,
+                color: c.textPrimary,
               ),
-              rightChevronIcon: const Icon(
+              rightChevronIcon: Icon(
                 Icons.chevron_right,
-                color: Colors.white,
+                color: c.textPrimary,
               ),
             ),
             daysOfWeekStyle: DaysOfWeekStyle(
               weekdayStyle: TextStyle(
-                color: Colors.white.withOpacity(0.5),
+                color: c.textPrimary.withOpacity(0.5),
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
               weekendStyle: TextStyle(
-                color: Colors.white.withOpacity(0.4),
+                color: c.textPrimary.withOpacity(0.4),
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
