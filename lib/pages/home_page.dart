@@ -1296,7 +1296,31 @@ class _HomePageState extends State<HomePage>
                   // test_page로 이동하고 돌아올 때 화면 새로고침
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => DDaySettingsPage()),
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) =>
+                          DDaySettingsPage(),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                        final slideTween = Tween<Offset>(
+                          begin: const Offset(0, 0.15),
+                          end: Offset.zero,
+                        ).chain(CurveTween(curve: Curves.easeOutCubic));
+                        final fadeTween = Tween<double>(
+                          begin: 0.0,
+                          end: 1.0,
+                        ).chain(CurveTween(curve: Curves.easeOut));
+                        return SlideTransition(
+                          position: animation.drive(slideTween),
+                          child: FadeTransition(
+                            opacity: animation.drive(fadeTween),
+                            child: child,
+                          ),
+                        );
+                      },
+                      transitionDuration: const Duration(milliseconds: 350),
+                      reverseTransitionDuration:
+                          const Duration(milliseconds: 300),
+                    ),
                   );
                   setState(() {}); // 돌아왔을 때 데이터 새로고침
                 },

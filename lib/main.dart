@@ -145,14 +145,38 @@ class MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserve
     final c = context.colors;
 
     return Scaffold(
-      body: PageView(
+      body: PageView.builder(
         controller: _pageController,
+        itemCount: _pages.length,
         onPageChanged: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        children: _pages,
+        itemBuilder: (context, index) {
+          return AnimatedBuilder(
+            animation: _pageController,
+            builder: (context, child) {
+              double value = 1.0;
+              if (_pageController.position.haveDimensions) {
+                value = _pageController.page! - index;
+                value = (1 - value.abs()).clamp(0.0, 1.0);
+              } else {
+                value = index == _selectedIndex ? 1.0 : 0.0;
+              }
+              final scale = 0.95 + (0.05 * value);
+              final opacity = value.clamp(0.0, 1.0);
+              return Opacity(
+                opacity: opacity,
+                child: Transform.scale(
+                  scale: scale,
+                  child: child,
+                ),
+              );
+            },
+            child: _pages[index],
+          );
+        },
       ),
 
       bottomNavigationBar: BottomNavigationBar(

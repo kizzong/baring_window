@@ -769,8 +769,31 @@ class _ProfilePageState extends State<ProfilePage> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const NotificationSettingsPage(),
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  const NotificationSettingsPage(),
+                          transitionsBuilder:
+                              (context, animation, secondaryAnimation, child) {
+                            final slideTween = Tween<Offset>(
+                              begin: const Offset(0, 0.15),
+                              end: Offset.zero,
+                            ).chain(CurveTween(curve: Curves.easeOutCubic));
+                            final fadeTween = Tween<double>(
+                              begin: 0.0,
+                              end: 1.0,
+                            ).chain(CurveTween(curve: Curves.easeOut));
+                            return SlideTransition(
+                              position: animation.drive(slideTween),
+                              child: FadeTransition(
+                                opacity: animation.drive(fadeTween),
+                                child: child,
+                              ),
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 350),
+                          reverseTransitionDuration:
+                              const Duration(milliseconds: 300),
                         ),
                       );
                     },
@@ -803,8 +826,33 @@ class _ProfilePageState extends State<ProfilePage> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => const PermissionSettingsPage(),
+                            PageRouteBuilder(
+                              pageBuilder:
+                                  (context, animation, secondaryAnimation) =>
+                                      const PermissionSettingsPage(),
+                              transitionsBuilder: (context, animation,
+                                  secondaryAnimation, child) {
+                                final slideTween = Tween<Offset>(
+                                  begin: const Offset(0, 0.15),
+                                  end: Offset.zero,
+                                ).chain(
+                                    CurveTween(curve: Curves.easeOutCubic));
+                                final fadeTween = Tween<double>(
+                                  begin: 0.0,
+                                  end: 1.0,
+                                ).chain(CurveTween(curve: Curves.easeOut));
+                                return SlideTransition(
+                                  position: animation.drive(slideTween),
+                                  child: FadeTransition(
+                                    opacity: animation.drive(fadeTween),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              transitionDuration:
+                                  const Duration(milliseconds: 350),
+                              reverseTransitionDuration:
+                                  const Duration(milliseconds: 300),
                             ),
                           );
                         },
