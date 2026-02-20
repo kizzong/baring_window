@@ -185,6 +185,52 @@ class _HomePageState extends State<HomePage>
     return (list as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
+  int _currentStreak() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    int streak = 0;
+
+    for (int i = 0; i < 365; i++) {
+      final d = today.subtract(Duration(days: i));
+      final key = DateFormat('yyyy-MM-dd').format(d);
+      final weekday = d.weekday;
+
+      // 해당 날짜 할일
+      final rawTodos = baringBox.get('todos');
+      final todosMap = rawTodos != null ? Map.from(rawTodos) : {};
+      final todoList = todosMap[key] != null
+          ? (todosMap[key] as List).map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
+
+      // 해당 날짜 루틴
+      final rawRoutines = baringBox.get('routines');
+      final allRoutines = rawRoutines != null
+          ? (rawRoutines as List).map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
+      final dayRoutines = allRoutines.where((r) {
+        if (r['type'] == 'daily') return true;
+        if (r['type'] == 'weekly') return List<int>.from(r['days'] ?? []).contains(weekday);
+        return false;
+      }).toList();
+
+      final total = todoList.length + dayRoutines.length;
+      if (total == 0) continue; // 할일/루틴 없는 날은 스킵
+
+      final completedTodos = todoList.where((t) => t['done'] == true).length;
+      final completedRoutines = dayRoutines.where((r) {
+        final comp = Map<String, dynamic>.from(r['completions'] ?? {});
+        return comp[key] == true;
+      }).length;
+
+      if (completedTodos + completedRoutines == total) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
   void _scheduleNotificationForTodo(int index, Map<String, dynamic> todo) {
     final time = todo['time'] as String?;
     final notifyBefore = todo['notifyBefore'] as int?;
@@ -993,7 +1039,7 @@ class _HomePageState extends State<HomePage>
                       locale: const Locale('ko', 'KR'),
                       delegates: const [GlobalCupertinoLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
                       child: CupertinoTheme(
-                        data: CupertinoThemeData(brightness: Brightness.dark, textTheme: CupertinoTextThemeData(dateTimePickerTextStyle: TextStyle(color: Colors.white, fontSize: 22))),
+                        data: CupertinoThemeData(brightness: c.brightness, textTheme: CupertinoTextThemeData(dateTimePickerTextStyle: TextStyle(color: c.textPrimary, fontSize: 22))),
                         child: CupertinoDatePicker(mode: CupertinoDatePickerMode.time, initialDateTime: tempTime, use24hFormat: false, onDateTimeChanged: (dt) => tempTime = dt),
                       ),
                     ),
@@ -1568,6 +1614,7 @@ class _HomePageState extends State<HomePage>
                   final data = _todayCompletion();
                   final total = data['total']!;
                   final completed = data['completed']!;
+                  final streak = _currentStreak();
                   return Row(
                     children: [
                       Expanded(
@@ -1655,6 +1702,68 @@ class _HomePageState extends State<HomePage>
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: c.analysisBg,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: c.borderColor,
+                            ),
+                          ),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  height: 64,
+                                  child: Center(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.local_fire_department,
+                                          size: 30,
+                                          color: streak > 0 ? const Color(0xFFF97316) : c.textPrimary.withOpacity(0.3),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          streak > 0 ? "$streak일" : "-",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 30,
+                                            color: streak > 0 ? const Color(0xFFF59E0B) : c.textPrimary.withOpacity(0.3),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  "연속 달성",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  streak > 0 ? "연속 달성 중!" : "오늘 도전하세요",
+                                  style: TextStyle(
+                                    color: c.textPrimary.withOpacity(0.55),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

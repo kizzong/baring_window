@@ -60,7 +60,7 @@ class AppColors extends ThemeExtension<AppColors> {
     inputBg: Color(0xFFF5F5F5),
     chipBg: Color(0xFFE8F0FE),
     analysisBg: Color(0xFFF0F4F8),
-    brightness: Brightness.dark, // kept dark for CupertinoDatePicker compatibility
+    brightness: Brightness.light,
   );
 
   @override

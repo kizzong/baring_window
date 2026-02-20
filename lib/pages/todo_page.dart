@@ -1593,11 +1593,11 @@ class _TodoPageState extends State<TodoPage> {
                         GlobalWidgetsLocalizations.delegate,
                       ],
                       child: CupertinoTheme(
-                        data: const CupertinoThemeData(
-                          brightness: Brightness.dark,
+                        data: CupertinoThemeData(
+                          brightness: c.brightness,
                           textTheme: CupertinoTextThemeData(
                             dateTimePickerTextStyle: TextStyle(
-                              color: Colors.white,
+                              color: c.textPrimary,
                               fontSize: 22,
                             ),
                           ),
@@ -1854,7 +1854,7 @@ class _TodoPageState extends State<TodoPage> {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: item.color,
+                    color: c.brightness == Brightness.light ? c.textPrimary : item.color,
                     height: 1.2,
                   ),
                 ),
@@ -1866,7 +1866,7 @@ class _TodoPageState extends State<TodoPage> {
                         style: TextStyle(
                           fontSize: 8,
                           fontWeight: FontWeight.w500,
-                          color: item.color.withOpacity(0.7),
+                          color: c.brightness == Brightness.light ? c.textPrimary.withOpacity(0.7) : item.color.withOpacity(0.7),
                           height: 1.2,
                         ),
                       ),
@@ -1875,7 +1875,7 @@ class _TodoPageState extends State<TodoPage> {
                         Icon(
                           Icons.notifications_active_outlined,
                           size: 8,
-                          color: item.color.withOpacity(0.7),
+                          color: c.brightness == Brightness.light ? c.textPrimary.withOpacity(0.7) : item.color.withOpacity(0.7),
                         ),
                       ],
                     ],
