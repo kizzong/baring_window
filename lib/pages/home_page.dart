@@ -7,6 +7,7 @@ import 'package:baring_windows/services/widget_service.dart';
 import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
@@ -69,6 +70,84 @@ class _HomePageState extends State<HomePage>
     completed += routines.where((r) => _isRoutineCompletedToday(r)).length;
 
     return {'completed': completed, 'total': total};
+  }
+
+  void _checkCompletionAndCelebrate() {
+    final data = _todayCompletion();
+    final total = data['total']!;
+    final completed = data['completed']!;
+    if (total == 0 || completed != total) return;
+
+    final lastCelebrated = baringBox.get('lastCelebratedDate') as String?;
+    if (lastCelebrated == _todayKey) return;
+
+    baringBox.put('lastCelebratedDate', _todayKey);
+    _showCelebrationDialog();
+  }
+
+  void _showCelebrationDialog() {
+    HapticFeedback.mediumImpact();
+    final c = context.colors;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.dialogBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Image.asset(
+              'assets/r-4.happy_face.png',
+              width: 150,
+              height: 150,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              '오늘 할 일을 모두 완료했어요!',
+              style: TextStyle(
+                color: c.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '대단해요! 내일도 함께 해요',
+              style: TextStyle(
+                color: c.textSecondary,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: TextButton.styleFrom(
+                backgroundColor: c.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                '확인',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _refreshAnalysisAnim() {
@@ -156,9 +235,11 @@ class _HomePageState extends State<HomePage>
     completions[_todayKey] = !(completions[_todayKey] == true);
     allRoutines[globalIndex]['completions'] = completions;
 
+    HapticFeedback.lightImpact();
     baringBox.put('routines', allRoutines);
     setState(() {});
     _refreshAnalysisAnim();
+    _checkCompletionAndCelebrate();
     WidgetService.syncWidget();
   }
 
@@ -259,6 +340,7 @@ class _HomePageState extends State<HomePage>
   }
 
   void _performToggle(int index, Map<String, dynamic> todo, bool newDone) {
+    HapticFeedback.lightImpact();
     final raw = baringBox.get('todos');
     if (raw == null) return;
     final Map data = Map.from(raw);
@@ -270,6 +352,7 @@ class _HomePageState extends State<HomePage>
     baringBox.put('todos', data);
     setState(() {});
     _refreshAnalysisAnim();
+    _checkCompletionAndCelebrate();
     WidgetService.syncWidget();
   }
 
@@ -495,6 +578,7 @@ class _HomePageState extends State<HomePage>
   }
 
   void _performDeleteRoutine(int index) {
+    HapticFeedback.mediumImpact();
     final todayRoutines = _getTodayRoutines();
     if (index >= todayRoutines.length) return;
     final routine = todayRoutines[index];
@@ -579,6 +663,7 @@ class _HomePageState extends State<HomePage>
   }
 
   void _performDeleteTodo(int index) {
+    HapticFeedback.mediumImpact();
     final raw = baringBox.get('todos');
     if (raw == null) return;
     final Map data = Map.from(raw);

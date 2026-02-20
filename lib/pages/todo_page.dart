@@ -5,6 +5,7 @@ import 'package:baring_windows/services/widget_service.dart';
 import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive/hive.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -213,6 +214,7 @@ class _TodoPageState extends State<TodoPage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
+                HapticFeedback.lightImpact();
                 _todos[key]![index]['done'] = true;
                 _cancelNotificationForTodo(key, index);
                 _saveTodos();
@@ -235,6 +237,7 @@ class _TodoPageState extends State<TodoPage> {
 
     // 완료된 할 일을 체크 해제하는 경우 → 알림 재예약
     if (isDone && hasNotification) {
+      HapticFeedback.lightImpact();
       _todos[key]![index]['done'] = false;
       _scheduleNotificationForTodo(key, index, _todos[key]![index]);
       _saveTodos();
@@ -245,6 +248,7 @@ class _TodoPageState extends State<TodoPage> {
 
     // 알림 시간이 지난 할 일 완료 → 다이얼로그 없이 바로 완료 처리
     if (!isDone && hasNotification && isTimePassed) {
+      HapticFeedback.lightImpact();
       _todos[key]![index]['done'] = true;
       _cancelNotificationForTodo(key, index);
       _saveTodos();
@@ -254,6 +258,7 @@ class _TodoPageState extends State<TodoPage> {
     }
 
     // 알림 없는 할 일 → 기존 동작
+    HapticFeedback.lightImpact();
     _todos[key]![index]['done'] = !isDone;
     _saveTodos();
     setState(() {});
@@ -294,6 +299,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _performDeleteTodo(int index) {
+    HapticFeedback.mediumImpact();
     final c = context.colors;
     final key = _dayKey(_selectedDay);
     if (_todos[key] != null && index < _todos[key]!.length) {
@@ -514,6 +520,7 @@ class _TodoPageState extends State<TodoPage> {
         _routines[globalIndex]['completions'] ?? {});
     completions[key] = !(completions[key] == true);
     _routines[globalIndex]['completions'] = completions;
+    HapticFeedback.lightImpact();
     _saveRoutines();
     setState(() {});
     _sheetStateSetter?.call(() {});
@@ -553,6 +560,7 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   void _performDeleteRoutine(int routineIndex) {
+    HapticFeedback.mediumImpact();
     final c = context.colors;
     final routinesForDay = _getRoutinesForDay(_selectedDay);
     if (routineIndex >= routinesForDay.length) return;
