@@ -1,16 +1,14 @@
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:baring_windows/theme/app_colors.dart';
 import 'package:baring_windows/main.dart' show isDarkMode;
-import '../services/notification_service.dart';
+import 'notification_settings_page.dart';
+import 'permission_settings_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -19,44 +17,30 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
+class _ProfilePageState extends State<ProfilePage> {
   Box baringBox = Hive.box("baring");
 
   String userName = '바링';
 
   final TextEditingController _nameController =
-      TextEditingController(); // 컨트롤러 추가 ⭐
-  bool isEditingName = false; // 수정 모드 여부 ⭐
+      TextEditingController();
+  bool isEditingName = false;
 
-
-  bool morningTodoAlert = false;
-  bool eveningTodoAlert = false;
-  TimeOfDay morningTime = const TimeOfDay(hour: 8, minute: 0);
-  TimeOfDay eveningTime = const TimeOfDay(hour: 21, minute: 0);
-
-  int bottomIndex = 1;
-  String? profileImagePath; // 프로필 이미지 경로 추가 ⭐
-  final ImagePicker _picker = ImagePicker(); // 이미지 피커 추가 ⭐
-
-  // 권한 상태
-  bool? permCamera;
-  bool? permNotification;
-
-  static const _settingsChannel = MethodChannel('com.baring/settings');
+  String? profileImagePath;
+  final ImagePicker _picker = ImagePicker();
 
   void _loadUserName() {
     final savedName = baringBox.get("userName");
     if (savedName != null) {
       setState(() {
         userName = savedName;
-        _nameController.text = savedName; // 컨트롤러에도 설정 ⭐
+        _nameController.text = savedName;
       });
     } else {
-      _nameController.text = userName; // 기본값 설정 ⭐
+      _nameController.text = userName;
     }
   }
 
-  // 이미지 크롭 함수
   Future<String?> _cropImage(String sourcePath) async {
     final c = context.colors;
     final croppedFile = await ImageCropper().cropImage(
@@ -85,7 +69,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     return croppedFile?.path;
   }
 
-  // 이미지 선택 → 크롭 → 저장
   Future<void> _pickAndCropImage(ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -165,7 +148,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       });
       baringBox.put("userName", newName);
 
-      // 성공 메시지 표시 ⭐
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -188,7 +170,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         ),
       );
     } else {
-      // 이름이 비어있을 때 경고 메시지 ⭐
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -213,7 +194,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     }
   }
 
-  // 이미지 선택 옵션 다이얼로그 ⭐
   Future<void> _showImageSourceDialog() async {
     final c = context.colors;
     showModalBottomSheet(
@@ -256,7 +236,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                     });
                     baringBox.delete("profileImagePath");
 
-                    // 삭제 메시지 표시 ⭐
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Row(
@@ -290,9 +269,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     );
   }
 
-  // 앱스토어/플레이스토어 리뷰 페이지로 이동 ⭐
   Future<void> _openReviewPage() async {
-    // 감사 메시지 먼저 표시
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -315,18 +292,13 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       ),
     );
 
-    // 1초 대기 후 스토어로 이동 ⭐
     await Future.delayed(Duration(seconds: 1));
 
-    // 플랫폼별 스토어 URL
     final Uri reviewUrl;
 
     if (Platform.isAndroid) {
-      // Google Play 스토어 (패키지명을 실제 앱 패키지명으로 변경하세요)
       reviewUrl = Uri.parse('market://details?id=com.example.baring_windows');
-      // 또는 웹 URL: https://play.google.com/store/apps/details?id=com.example.baring_windows
     } else if (Platform.isIOS) {
-      // App Store (앱 ID를 실제 앱 ID로 변경하세요)
       reviewUrl = Uri.parse(
         'https://apps.apple.com/app/id6743991553?action=write-review',
       );
@@ -352,7 +324,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     }
   }
 
-  // 피드백 다이얼로그 표시 ⭐
   void _showFeedbackDialog() {
     final c = context.colors;
     showDialog(
@@ -472,7 +443,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     );
   }
 
-  // 카카오톡 오픈채팅 피드백 ⭐
   Future<void> _openKakaoFeedback() async {
     final Uri kakaoUrl = Uri.parse('https://open.kakao.com/o/sdDlLufi');
 
@@ -508,285 +478,104 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     }
   }
 
-
-  Future<void> _openAppSettings() async {
-    try {
-      await _settingsChannel.invokeMethod('openAppSettings');
-    } catch (e) {
-      debugPrint('설정 열기 오류: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              '설정 > 앱 > 바링 > 권한에서 캘린더를 허용해주세요',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: const Color(0xFFFF9800),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 4),
+  void _showNameEditDialog() {
+    final c = context.colors;
+    _nameController.text = userName;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: c.dialogBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
+          title: Text(
+            '이름 변경',
+            style: TextStyle(
+              color: c.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: TextField(
+            controller: _nameController,
+            maxLength: 10,
+            autofocus: true,
+            style: TextStyle(
+              color: c.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: InputDecoration(
+              hintText: '이름을 입력해주세요',
+              hintStyle: TextStyle(
+                color: c.subtle,
+                fontWeight: FontWeight.w600,
+              ),
+              counterStyle: TextStyle(color: c.subtle),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: c.borderColor),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: c.primary),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() => isEditingName = false);
+              },
+              child: Text(
+                '취소',
+                style: TextStyle(
+                  color: c.textPrimary.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _saveProfile();
+              },
+              child: Text(
+                '완료',
+                style: TextStyle(
+                  color: c.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         );
-      }
-    }
-  }
-
-  Future<void> _checkPermissions() async {
-    try {
-      final result = await _settingsChannel.invokeMethod('checkPermissions');
-      if (result != null && mounted) {
-        setState(() {
-          permCamera = result['camera'] as bool?;
-          permNotification = result['notification'] as bool?;
-        });
-      }
-    } catch (e) {
-      debugPrint('권한 확인 오류: $e');
-    }
+      },
+    );
   }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadUserName(); // ← 여기서 호출! ⭐
-    _loadUserData(); // 함수 이름 수정 ⭐
-    _checkPermissions();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkPermissions();
-    }
+    _loadUserName();
+    _loadUserData();
   }
 
   void _loadUserData() {
-    // 함수 이름 변경 ⭐
     final savedName = baringBox.get("userName", defaultValue: "바링");
     final savedImagePath = baringBox.get("profileImagePath");
-
-    final savedMorning = baringBox.get("morningTodoAlert", defaultValue: false);
-    final savedEvening = baringBox.get("eveningTodoAlert", defaultValue: false);
-    final savedMorningHour = baringBox.get("morningTimeHour", defaultValue: 8);
-    final savedMorningMinute = baringBox.get("morningTimeMinute", defaultValue: 0);
-    final savedEveningHour = baringBox.get("eveningTimeHour", defaultValue: 21);
-    final savedEveningMinute = baringBox.get("eveningTimeMinute", defaultValue: 0);
 
     setState(() {
       userName = savedName;
       _nameController.text = savedName;
       profileImagePath = savedImagePath;
-      morningTodoAlert = savedMorning;
-      eveningTodoAlert = savedEvening;
-      morningTime = TimeOfDay(hour: savedMorningHour, minute: savedMorningMinute);
-      eveningTime = TimeOfDay(hour: savedEveningHour, minute: savedEveningMinute);
     });
-  }
-
-  String _formatTime(TimeOfDay t) {
-    final period = t.hour < 12 ? '오전' : '오후';
-    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final m = t.minute.toString().padLeft(2, '0');
-    return '$period $h:$m';
-  }
-
-  Future<TimeOfDay?> _pickNotificationTime(TimeOfDay initial) async {
-    final c = context.colors;
-    TimeOfDay selected = initial;
-
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          decoration: BoxDecoration(
-            color: c.scaffoldBg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 상단 바
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.textPrimary.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // 헤더
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx, false),
-                      child: Text(
-                        '취소',
-                        style: TextStyle(
-                          color: c.textPrimary.withOpacity(0.5),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '알림 시간 설정',
-                      style: TextStyle(
-                        color: c.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx, true),
-                      child: Text(
-                        '완료',
-                        style: TextStyle(
-                          color: c.primary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // CupertinoDatePicker
-              SizedBox(
-                height: 220,
-                child: CupertinoTheme(
-                  data: CupertinoThemeData(
-                    brightness: c.brightness,
-                    textTheme: CupertinoTextThemeData(
-                      dateTimePickerTextStyle: TextStyle(
-                        color: c.textPrimary,
-                        fontSize: 22,
-                      ),
-                    ),
-                  ),
-                  child: CupertinoDatePicker(
-                    mode: CupertinoDatePickerMode.time,
-                    use24hFormat: false,
-                    initialDateTime: DateTime(
-                      2000, 1, 1, initial.hour, initial.minute,
-                    ),
-                    onDateTimeChanged: (dt) {
-                      selected = TimeOfDay(hour: dt.hour, minute: dt.minute);
-                    },
-                  ),
-                ),
-              ),
-              SizedBox(height: MediaQuery.of(ctx).padding.bottom + 16),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (confirmed == true) return selected;
-    return null;
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _nameController.dispose(); // 메모리 해제 ⭐
+    _nameController.dispose();
     super.dispose();
-  }
-
-  Widget _buildPermissionRow({
-    required IconData icon,
-    required String title,
-    required String desc,
-    required bool? granted,
-  }) {
-    final c = context.colors;
-    final bool isGranted = granted == true;
-    final Color badgeColor = granted == null
-        ? const Color(0xFF64748B)
-        : isGranted
-            ? const Color(0xFF22C55E)
-            : const Color(0xFFEF4444);
-    final String badgeText = granted == null ? '확인중' : isGranted ? '허용' : '거부';
-
-    return GestureDetector(
-      onTap: _openAppSettings,
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.textPrimary.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.textPrimary.withOpacity(0.05)),
-        ),
-        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: c.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: c.primary, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: c.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    desc,
-                    style: TextStyle(
-                      color: c.subtle,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: badgeColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                badgeText,
-                style: TextStyle(
-                  color: badgeColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: c.textPrimary.withOpacity(0.3),
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -798,7 +587,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       appBar: AppBar(
         backgroundColor: c.scaffoldBg,
         centerTitle: true,
-
         title: Text(
           '프로필',
           style: TextStyle(
@@ -860,9 +648,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           ),
                         ),
                         child: ClipOval(
-                          child:
-                              profileImagePath !=
-                                  null // 이미지 표시 ⭐
+                          child: profileImagePath != null
                               ? Image.file(
                                   File(profileImagePath!),
                                   fit: BoxFit.cover,
@@ -899,7 +685,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                           ),
                         ),
                         child: IconButton(
-                          onPressed: _showImageSourceDialog, // 다이얼로그 호출 ⭐
+                          onPressed: _showImageSourceDialog,
                           icon: Icon(
                             Icons.camera_alt,
                             color: Colors.white,
@@ -950,275 +736,95 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 const SizedBox(height: 26),
 
                 // ---------- SECTION: PERSONAL INFORMATION ----------
-                Text(
-                  '프로필 정보',
-                  style: TextStyle(
-                    color: c.textPrimary.withOpacity(0.60),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
+                _SectionHeader(title: '프로필 정보'),
+                const SizedBox(height: 8),
                 _CardBox(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '이름',
-                        style: TextStyle(
-                          color: c.textPrimary.withOpacity(0.85),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
+                  child: _SettingsRow(
+                    title: '이름',
+                    trailing: Text(
+                      userName,
+                      style: TextStyle(
+                        color: c.subtle,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: c.borderColor,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: c.borderColor,
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _nameController,
-                                maxLength: 10,
-                                onTap: () {
-                                  setState(() {
-                                    isEditingName = true; // 수정 모드 활성화
-                                  });
-                                },
-                                // onChanged: (value) {
-                                //   setState(() {
-                                //     userName = value; // 실시간 반영 ⭐
-                                //   });
-                                // },
-                                onEditingComplete: () {
-                                  setState(() {
-                                    userName = _nameController.text; // 실시간 반영 ⭐
-                                  });
-                                },
-                                style: TextStyle(
-                                  color: c.textPrimary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                  counterText: '', // 글자 수 카운터 숨기기
-                                ),
-                              ),
-                            ),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(10),
-                              onTap: () {
-                                // TODO: 이름 수정 dialog 연결
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(6.0),
-                                child: Icon(
-                                  Icons.edit,
-                                  color: c.primary.withOpacity(0.95),
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 22),
-
-                // ---------- SECTION: TODO DAILY NOTIFICATIONS ----------
-                Text(
-                  '할일 알림',
-                  style: TextStyle(
-                    color: c.textPrimary.withOpacity(0.60),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                _CardBox(
-                  child: Column(
-                    children: [
-                      // ── 아침 할일 알림 ──
-                      _SwitchRow(
-                        title: '아침 할일 알림',
-                        desc: '매일 ${_formatTime(morningTime)}에 오늘의 할 일을 알려줘요.',
-                        value: morningTodoAlert,
-                        onChanged: (v) async {
-                          if (v) {
-                            final picked = await _pickNotificationTime(morningTime);
-                            if (picked == null) return;
-                            setState(() {
-                              morningTodoAlert = true;
-                              morningTime = picked;
-                            });
-                            baringBox.put("morningTodoAlert", true);
-                            baringBox.put("morningTimeHour", picked.hour);
-                            baringBox.put("morningTimeMinute", picked.minute);
-                            NotificationService.refreshDailyNotifications();
-                          } else {
-                            setState(() => morningTodoAlert = false);
-                            baringBox.put("morningTodoAlert", false);
-                            NotificationService.cancelMorningNotification();
-                          }
-                        },
-                      ),
-                      // 시간 변경 버튼 (ON 상태일 때만)
-                      if (morningTodoAlert) ...[
-                        const SizedBox(height: 6),
-                        _TimeChip(
-                          time: _formatTime(morningTime),
-                          primary: c.primary,
-                          onTap: () async {
-                            final picked = await _pickNotificationTime(morningTime);
-                            if (picked == null) return;
-                            setState(() => morningTime = picked);
-                            baringBox.put("morningTimeHour", picked.hour);
-                            baringBox.put("morningTimeMinute", picked.minute);
-                            NotificationService.refreshDailyNotifications();
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 6),
-                      // ── 저녁 할일 알림 ──
-                      _SwitchRow(
-                        title: '저녁 할일 알림',
-                        desc: '매일 ${_formatTime(eveningTime)}에 내일의 할 일을 알려줘요.',
-                        value: eveningTodoAlert,
-                        onChanged: (v) async {
-                          if (v) {
-                            final picked = await _pickNotificationTime(eveningTime);
-                            if (picked == null) return;
-                            setState(() {
-                              eveningTodoAlert = true;
-                              eveningTime = picked;
-                            });
-                            baringBox.put("eveningTodoAlert", true);
-                            baringBox.put("eveningTimeHour", picked.hour);
-                            baringBox.put("eveningTimeMinute", picked.minute);
-                            NotificationService.refreshDailyNotifications();
-                          } else {
-                            setState(() => eveningTodoAlert = false);
-                            baringBox.put("eveningTodoAlert", false);
-                            NotificationService.cancelEveningNotification();
-                          }
-                        },
-                      ),
-                      // 시간 변경 버튼 (ON 상태일 때만)
-                      if (eveningTodoAlert) ...[
-                        const SizedBox(height: 6),
-                        _TimeChip(
-                          time: _formatTime(eveningTime),
-                          primary: c.primary,
-                          onTap: () async {
-                            final picked = await _pickNotificationTime(eveningTime);
-                            if (picked == null) return;
-                            setState(() => eveningTime = picked);
-                            baringBox.put("eveningTimeHour", picked.hour);
-                            baringBox.put("eveningTimeMinute", picked.minute);
-                            NotificationService.refreshDailyNotifications();
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 22),
-
-                // ---------- SECTION: PERMISSION SETTINGS ----------
-                Text(
-                  '권한 설정',
-                  style: TextStyle(
-                    color: c.textPrimary.withOpacity(0.60),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                _CardBox(
-                  child: Column(
-                    children: [
-                      _buildPermissionRow(
-                        icon: Icons.camera_alt_rounded,
-                        title: '사진',
-                        desc: '프로필 사진 촬영 및 갤러리 접근',
-                        granted: permCamera,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildPermissionRow(
-                        icon: Icons.notifications_rounded,
-                        title: '알림',
-                        desc: '할일 알림 및 일정 알림',
-                        granted: permNotification,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 22),
-
-                // ---------- SECTION: DISPLAY SETTINGS ----------
-                Text(
-                  '화면 설정',
-                  style: TextStyle(
-                    color: c.textPrimary.withOpacity(0.60),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                _CardBox(
-                  child: _SwitchRow(
-                    title: '다크 모드',
-                    desc: '어두운 화면 테마를 사용합니다.',
-                    value: isDarkMode.value,
-                    onChanged: (v) {
-                      setState(() {});
-                      isDarkMode.value = v;
-                      baringBox.put('isDarkMode', v);
+                    ),
+                    onTap: () {
+                      setState(() {
+                        isEditingName = true;
+                      });
+                      _showNameEditDialog();
                     },
                   ),
                 ),
 
-                const SizedBox(height: 22),
+                const SizedBox(height: 12),
 
-                Text(
-                  '평가하기',
-                  style: TextStyle(
-                    color: c.textPrimary.withOpacity(0.60),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
+                // ---------- SECTION: 알림 ----------
+                _SectionHeader(title: '알림'),
+                const SizedBox(height: 8),
+                _CardBox(
+                  child: _SettingsRow(
+                    title: '할일 알림',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationSettingsPage(),
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 10),
 
+                const SizedBox(height: 12),
+
+                // ---------- SECTION: 앱 설정 ----------
+                _SectionHeader(title: '앱 설정'),
+                const SizedBox(height: 8),
                 _CardBox(
+                  child: Column(
+                    children: [
+                      _SettingsToggleRow(
+                        title: '다크 모드',
+                        value: isDarkMode.value,
+                        onChanged: (v) {
+                          setState(() {});
+                          isDarkMode.value = v;
+                          baringBox.put('isDarkMode', v);
+                        },
+                      ),
+                      Divider(
+                        color: c.textPrimary.withOpacity(0.06),
+                        height: 1,
+                      ),
+                      _SettingsRow(
+                        title: '권한 설정',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PermissionSettingsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // ---------- SECTION: 평가하기 ----------
+                _SectionHeader(title: '평가하기'),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: c.cardBg,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: c.borderColor),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1226,88 +832,81 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                         '앱이 마음에 드시나요?',
                         style: TextStyle(
                           color: c.textPrimary.withOpacity(0.85),
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            height: 54,
-                            width: MediaQuery.of(context).size.width * 0.405,
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(
-                                  0xFF2D86FF,
-                                ).withOpacity(0.55),
-                                width: 1.2,
+                          Expanded(
+                            child: Container(
+                              height: 54,
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFF2D86FF).withOpacity(0.55),
+                                  width: 1.2,
+                                ),
                               ),
-                            ),
-                            child: TextButton(
-                              onPressed: () {
-                                _openReviewPage();
-                              },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.thumb_up_outlined,
-                                    color: c.textPrimary,
-                                    size: 20,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '좋아요!',
-                                    style: TextStyle(
+                              child: TextButton(
+                                onPressed: _openReviewPage,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.thumb_up_outlined,
                                       color: c.textPrimary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
+                                      size: 20,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 8),
+                                    Text(
+                                      '좋아요!',
+                                      style: TextStyle(
+                                        color: c.textPrimary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                          // SizedBox(width: 12),
-                          Container(
-                            height: 54,
-                            width: MediaQuery.of(context).size.width * 0.395,
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(
-                                  0xFFE06A6A,
-                                ).withOpacity(0.55),
-                                width: 1.2,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Container(
+                              height: 54,
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFFE06A6A).withOpacity(0.55),
+                                  width: 1.2,
+                                ),
                               ),
-                            ),
-                            child: TextButton(
-                              onPressed: () {
-                                _showFeedbackDialog();
-                              },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.near_me_outlined,
-                                    color: c.textPrimary,
-                                    size: 20,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '아쉬워요..',
-                                    style: TextStyle(
+                              child: TextButton(
+                                onPressed: _showFeedbackDialog,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.near_me_outlined,
                                       color: c.textPrimary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
+                                      size: 20,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 8),
+                                    Text(
+                                      '아쉬워요..',
+                                      style: TextStyle(
+                                        color: c.textPrimary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -1316,47 +915,31 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
-
-                // ---------- LOG OUT ----------
-                // Container(
-                //   height: 54,
-                //   decoration: BoxDecoration(
-                //     color: Colors.transparent,
-                //     borderRadius: BorderRadius.circular(16),
-                //     border: Border.all(
-                //       color: const Color(0xFFE06A6A).withOpacity(0.55),
-                //       width: 1.2,
-                //     ),
-                //   ),
-                //   child: TextButton(
-                //     onPressed: () {
-                //       // TODO: 로그아웃 처리
-                //     },
-                //     child: Row(
-                //       mainAxisAlignment: MainAxisAlignment.center,
-                //       children: [
-                //         const Icon(
-                //           Icons.refresh_rounded,
-                //           color: Color(0xFFE06A6A),
-                //           size: 20,
-                //         ),
-                //         SizedBox(width: 8),
-                //         const Text(
-                //           '다시 작성',
-                //           style: TextStyle(
-                //             color: Color(0xFFE06A6A),
-                //             fontSize: 16,
-                //             fontWeight: FontWeight.w800,
-                //           ),
-                //         ),
-                //       ],
-                //     ),
-                //   ),
-                // ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------- HELPER WIDGETS ----------
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Text(
+      title,
+      style: TextStyle(
+        color: c.textPrimary.withOpacity(0.60),
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.4,
       ),
     );
   }
@@ -1370,7 +953,7 @@ class _CardBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: c.cardBg,
         borderRadius: BorderRadius.circular(18),
@@ -1381,15 +964,63 @@ class _CardBox extends StatelessWidget {
   }
 }
 
-class _SwitchRow extends StatelessWidget {
+class _SettingsRow extends StatelessWidget {
   final String title;
-  final String desc;
+  final VoidCallback onTap;
+  final Widget? trailing;
+
+  const _SettingsRow({
+    required this.title,
+    required this.onTap,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: SizedBox(
+        height: 44,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: c.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (trailing != null) ...[
+                trailing!,
+                const SizedBox(width: 4),
+              ],
+              Icon(
+                Icons.chevron_right_rounded,
+                color: c.textPrimary.withOpacity(0.3),
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsToggleRow extends StatelessWidget {
+  final String title;
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  const _SwitchRow({
+  const _SettingsToggleRow({
     required this.title,
-    required this.desc,
     required this.value,
     required this.onChanged,
   });
@@ -1397,94 +1028,35 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        color: c.textPrimary.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.textPrimary.withOpacity(0.05)),
-      ),
-      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: c.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  desc,
-                  style: TextStyle(
-                    color: c.subtle,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    height: 1.25,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: Colors.white,
-            activeTrackColor: c.primary,
-            inactiveThumbColor: c.textPrimary.withOpacity(0.9),
-            inactiveTrackColor: c.textPrimary.withOpacity(0.20),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimeChip extends StatelessWidget {
-  final String time;
-  final Color primary;
-  final VoidCallback onTap;
-
-  const _TimeChip({
-    required this.time,
-    required this.primary,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: primary.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: primary.withValues(alpha: 0.25)),
-        ),
+    return SizedBox(
+      height: 44,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.access_time_rounded, color: primary, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              time,
-              style: TextStyle(
-                color: primary,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: c.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            const SizedBox(width: 6),
-            Icon(
-              Icons.edit_rounded,
-              color: primary.withValues(alpha: 0.6),
-              size: 14,
+            SizedBox(
+              height: 28,
+              child: FittedBox(
+                child: Switch(
+                  value: value,
+                  onChanged: onChanged,
+                  activeColor: Colors.white,
+                  activeTrackColor: c.primary,
+                  inactiveThumbColor: c.textPrimary.withOpacity(0.9),
+                  inactiveTrackColor: c.textPrimary.withOpacity(0.20),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
             ),
           ],
         ),
