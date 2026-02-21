@@ -26,13 +26,24 @@ class NotificationService {
     );
 
     await _plugin.initialize(settings);
+  }
 
-    // Android 13+ 알림 권한 요청
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestNotificationsPermission();
+  /// 알림 권한 요청 (온보딩에서 호출), 허용 시 true 반환
+  static Future<bool> requestPermission() async {
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android != null) {
+        final result = await android.requestNotificationsPermission();
+        return result ?? false;
+      }
+      // iOS는 init에서 이미 처리됨
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// 고유 알림 ID 생성: 날짜 키 + 인덱스 기반

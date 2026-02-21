@@ -1,31 +1,53 @@
 import 'package:flutter/material.dart';
 
 class OnboardingPage2 extends StatefulWidget {
-  const OnboardingPage2({super.key, this.onNext});
-
-  final VoidCallback? onNext;
+  const OnboardingPage2({super.key});
 
   @override
   State<OnboardingPage2> createState() => _OnboardingPage2State();
 }
 
-class _OnboardingPage2State extends State<OnboardingPage2> {
-  int selectedIndex = 1;
+class _OnboardingPage2State extends State<OnboardingPage2>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _card1Fade;
+  late Animation<double> _card2Fade;
+  late Animation<double> _card3Fade;
 
-  final List<Color> cardColors = [
-    const Color(0xFFFFD54F), // 노랑
-    const Color(0xFF3DDC84), // 초록
-    const Color(0xFFFF6F7D), // 빨강
-    const Color(0xFF3E7BFF), // 파랑
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
+
+    _card1Fade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+    );
+    _card2Fade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.2, 0.6, curve: Curves.easeOut),
+    );
+    _card3Fade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.4, 0.8, curve: Curves.easeOut),
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final h = MediaQuery.of(context).size.height;
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF050A12),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -39,84 +61,53 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
             padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Column(
               children: [
-                SizedBox(height: h * 0.08),
-
-                // 제목
-                const Text(
-                  '나만의 스타일로 꾸미는 카드',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.4,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  '다채로운 컬러와 그라데이션으로\n나만의 D-Day를 만드세요.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 18,
-                    height: 1.6,
-                    color: Colors.white.withValues(alpha: 0.55),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
                 const Spacer(flex: 2),
 
-                // 카드 미리보기
-                SizedBox(
-                  height: h * 0.26,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      _PreviewCard(
-                        color: cardColors[2],
-                        rotate: -0.18,
-                        screenWidth: w,
-                      ),
-                      _PreviewCard(
-                        color: cardColors[0],
-                        rotate: 0.18,
-                        screenWidth: w,
-                      ),
-                      _PreviewCard(
-                        color: cardColors[selectedIndex],
-                        rotate: 0,
-                        isMain: true,
-                        screenWidth: w,
-                      ),
-                    ],
+                const Text(
+                  '바링이 도와줄게요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.4,
                   ),
                 ),
 
-                SizedBox(height: h * 0.03),
+                const SizedBox(height: 36),
 
-                // 색 선택
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(cardColors.length + 1, (index) {
-                    if (index == cardColors.length) {
-                      return _ColorAddButton();
-                    }
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedIndex = index;
-                        });
-                      },
-                      child: _ColorDot(
-                        color: cardColors[index],
-                        isSelected: selectedIndex == index,
-                      ),
-                    );
-                  }),
+                FadeTransition(
+                  opacity: _card1Fade,
+                  child: _BenefitCard(
+                    icon: Icons.flag_rounded,
+                    title: 'D-Day 관리',
+                    subtitle: '목표까지 남은 날을 한눈에',
+                  ),
                 ),
 
-                const Spacer(flex: 1),
+                const SizedBox(height: 14),
+
+                FadeTransition(
+                  opacity: _card2Fade,
+                  child: _BenefitCard(
+                    icon: Icons.check_circle_outline,
+                    title: '할 일 & 루틴',
+                    subtitle: '매일의 할 일을 체계적으로',
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                FadeTransition(
+                  opacity: _card3Fade,
+                  child: _BenefitCard(
+                    icon: Icons.widgets_rounded,
+                    title: '홈 화면 위젯',
+                    subtitle: '앱을 열지 않아도 바로 확인',
+                  ),
+                ),
+
+                const Spacer(flex: 3),
               ],
             ),
           ),
@@ -126,105 +117,68 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
   }
 }
 
-class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({
-    required this.color,
-    required this.rotate,
-    required this.screenWidth,
-    this.isMain = false,
+class _BenefitCard extends StatelessWidget {
+  const _BenefitCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
   });
 
-  final Color color;
-  final double rotate;
-  final double screenWidth;
-  final bool isMain;
-
-  @override
-  Widget build(BuildContext context) {
-    final cardWidth = isMain ? screenWidth * 0.78 : screenWidth * 0.72;
-    final cardHeight = isMain ? cardWidth * 0.56 : cardWidth * 0.56;
-
-    return Transform.rotate(
-      angle: rotate,
-      child: Container(
-        width: cardWidth,
-        height: cardHeight,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              '목표',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            Spacer(),
-            Text(
-              '자격증 합격',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ColorDot extends StatelessWidget {
-  const _ColorDot({required this.color, required this.isSelected});
-
-  final Color color;
-  final bool isSelected;
+  final IconData icon;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      padding: const EdgeInsets.all(3),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: isSelected
-            ? Border.all(color: const Color(0xFF3E7BFF), width: 3)
-            : null,
+        color: Colors.white.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.10),
+          width: 1,
+        ),
       ),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF3E7BFF).withOpacity(0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: const Color(0xFF3E7BFF), size: 26),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-    );
-  }
-}
-
-class _ColorAddButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 42,
-      height: 42,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF1F3F5),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(Icons.add, color: Color(0xFF9AA4B2)),
     );
   }
 }
