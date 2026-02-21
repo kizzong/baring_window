@@ -909,10 +909,15 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    isBest ? Icons.emoji_events : Icons.trending_down,
-                    size: 48,
-                    color: c.subtle.withOpacity(0.4),
+                  Opacity(
+                    opacity: 0.5,
+                    child: Image.asset(
+                      isBest
+                          ? 'assets/r-8.cheering_face.png'
+                          : 'assets/r-6.disappointed_face.png',
+                      width: 80,
+                      height: 80,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -994,7 +999,7 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
       const dayNames = ['', '월', '화', '수', '목', '금', '토', '일'];
       final days = List<int>.from(routine['days'] ?? []);
       days.sort();
-      activeDaysText = days.map((d) => '${dayNames[d]}요일').join(', ');
+      activeDaysText = days.map((d) => dayNames[d]).join(', ');
     }
 
     // 최근 4주 주별 달성률
@@ -1035,25 +1040,39 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: c.borderColor),
           ),
-          child: Column(
+          child: Row(
             children: [
-              Icon(
-                isBest ? Icons.emoji_events : Icons.trending_down,
-                size: 36,
-                color: isBest ? const Color(0xFFFBBF24) : const Color(0xFFEF4444),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                routineTitle,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: c.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      isBest ? Icons.emoji_events : Icons.trending_down,
+                      size: 36,
+                      color: isBest ? const Color(0xFFFBBF24) : const Color(0xFFEF4444),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      routineTitle,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(activeDaysText, style: TextStyle(fontSize: 13, color: c.textSecondary)),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 4),
-              Text(activeDaysText, style: TextStyle(fontSize: 13, color: c.textSecondary)),
+              const SizedBox(width: 12),
+              Image.asset(
+                isBest
+                    ? 'assets/r-8.cheering_face.png'
+                    : 'assets/r-6.disappointed_face.png',
+                width: 90,
+                height: 90,
+              ),
             ],
           ),
         ),

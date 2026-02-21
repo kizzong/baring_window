@@ -23,6 +23,16 @@
         android:textStyle="bold"
         android:letterSpacing="0.03" />
 
+    <ImageView
+        android:id="@+id/cheering_image"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:src="@drawable/cheering2_face"
+        android:scaleType="fitCenter"
+        android:alpha="0.85" />
+
     <LinearLayout
         android:id="@+id/title_dday_container"
         android:layout_width="match_parent"

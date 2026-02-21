@@ -171,7 +171,7 @@ struct BaringWidgetEntryView : View {
     var body: some View {
         GeometryReader { geometry in
             VStack(alignment: .leading, spacing: 0) {
-                // 상단: 목표 뱃지
+                // 상단: 목표 뱃지 + 응원 이미지
                 HStack {
                     Text("목표")
                         .font(.system(size: 9, weight: .bold))
@@ -182,11 +182,17 @@ struct BaringWidgetEntryView : View {
                         .cornerRadius(10)
 
                     Spacer()
+
+                    Image("cheering2_face")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 40, height: 40)
+                        .opacity(0.85)
                 }
-                .frame(height: 20)
+                .frame(height: 40)
 
                 Spacer()
-                    .frame(height: 10)
+                    .frame(height: 2)
 
                 // 중단: 제목과 D-Day
                 HStack(alignment: .center, spacing: 6) {
@@ -343,7 +349,7 @@ struct BaringSmallWidgetEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 상단: 목표 뱃지
+            // 상단: 목표 뱃지 + 응원 이미지
             HStack {
                 Text("목표")
                     .font(.system(size: 9, weight: .bold))
@@ -353,9 +359,14 @@ struct BaringSmallWidgetEntryView: View {
                     .background(Color.white.opacity(0.18))
                     .cornerRadius(8)
                 Spacer()
+                Image("cheering2_face")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 30, height: 30)
+                    .opacity(0.85)
             }
 
-            Spacer().frame(height: 8)
+            Spacer().frame(height: 4)
 
             // 제목
             Text(entry.title)

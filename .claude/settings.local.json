@@ -13,7 +13,9 @@
       "Bash(del \"C:\\\\Users\\\\PC\\\\Desktop\\\\baring_window\\\\lib\\\\services\\\\calendar_service.dart\")",
       "Bash(wc:*)",
       "Bash(dir:*)",
-      "Bash(dart pub add:*)"
+      "Bash(dart pub add:*)",
+      "Bash(ls:*)",
+      "Bash(flutter build:*)"
     ]
   }
 }
