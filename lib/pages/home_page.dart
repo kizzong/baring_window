@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:baring_windows/main.dart';
 import 'package:baring_windows/pages/dday_settings_page.dart';
@@ -87,66 +88,14 @@ class _HomePageState extends State<HomePage>
 
   void _showCelebrationDialog() {
     HapticFeedback.mediumImpact();
-    final c = context.colors;
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.dialogBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Image.asset(
-              'assets/r-4.happy_face.png',
-              width: 150,
-              height: 150,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              '오늘 할 일을 모두 완료했어요!',
-              style: TextStyle(
-                color: c.textPrimary,
-                fontWeight: FontWeight.w800,
-                fontSize: 18,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '대단해요! 내일도 함께 해요',
-              style: TextStyle(
-                color: c.textSecondary,
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              style: TextButton.styleFrom(
-                backgroundColor: c.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: const Text(
-                '확인',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      barrierDismissible: true,
+      barrierLabel: 'celebration',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, _, __) =>
+          _CelebrationDialog(colors: context.colors),
     );
   }
 
@@ -1886,4 +1835,284 @@ class _HomePageState extends State<HomePage>
       ),
     );
   }
+}
+
+// ── 축하 다이얼로그 (애니메이션 + 컨페티) ──
+
+class _CelebrationDialog extends StatefulWidget {
+  final AppColors colors;
+  const _CelebrationDialog({required this.colors});
+
+  @override
+  State<_CelebrationDialog> createState() => _CelebrationDialogState();
+}
+
+class _CelebrationDialogState extends State<_CelebrationDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _entryController;
+  late AnimationController _confettiController;
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _pulseAnim;
+  late List<_ConfettiParticle> _particles;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 다이얼로그 바운스 등장
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scaleAnim = CurvedAnimation(
+      parent: _entryController,
+      curve: Curves.elasticOut,
+    );
+
+    // 컨페티 애니메이션
+    _confettiController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3500),
+    );
+
+    // 이미지 펄스
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    final rng = Random();
+    _particles = List.generate(60, (_) => _ConfettiParticle(rng));
+
+    _entryController.forward();
+    _confettiController.forward();
+    _pulseController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    _confettiController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.colors;
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        children: [
+          // 바깥 터치 시 닫기
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: const SizedBox.expand(),
+          ),
+          // 다이얼로그 카드
+          Center(
+            child: ScaleTransition(
+              scale: _scaleAnim,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 20),
+                decoration: BoxDecoration(
+                  color: c.dialogBg,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 펄스 이미지
+                    ScaleTransition(
+                      scale: _pulseAnim,
+                      child: Image.asset(
+                        'assets/r-4.happy_face.png',
+                        width: 150,
+                        height: 150,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // 텍스트 페이드인 (순차)
+                    FadeTransition(
+                      opacity: CurvedAnimation(
+                        parent: _entryController,
+                        curve: const Interval(0.3, 0.7, curve: Curves.easeIn),
+                      ),
+                      child: Text(
+                        '오늘 할 일을 모두 완료했어요!',
+                        style: TextStyle(
+                          color: c.textPrimary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    FadeTransition(
+                      opacity: CurvedAnimation(
+                        parent: _entryController,
+                        curve: const Interval(0.5, 0.9, curve: Curves.easeIn),
+                      ),
+                      child: Text(
+                        '대단해요! 내일도 함께 해요',
+                        style: TextStyle(
+                          color: c.textSecondary,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // 버튼 페이드인
+                    FadeTransition(
+                      opacity: CurvedAnimation(
+                        parent: _entryController,
+                        curve: const Interval(0.6, 1.0, curve: Curves.easeIn),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            backgroundColor: c.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text(
+                            '확인',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // 컨페티 (다이얼로그 위에 표시, 터치 통과)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _confettiController,
+                builder: (context, _) => CustomPaint(
+                  painter: _ConfettiPainter(
+                    particles: _particles,
+                    progress: _confettiController.value,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 컨페티 파티클 데이터 ──
+
+class _ConfettiParticle {
+  final double x;
+  final double delay;
+  final double speed;
+  final double size;
+  final Color color;
+  final double drift;
+  final double rotationSpeed;
+  final int shape;
+
+  _ConfettiParticle(Random rng)
+      : x = rng.nextDouble(),
+        delay = rng.nextDouble() * 0.25,
+        speed = 0.5 + rng.nextDouble() * 0.5,
+        size = 5 + rng.nextDouble() * 7,
+        color = _colors[rng.nextInt(_colors.length)],
+        drift = (rng.nextDouble() - 0.5) * 80,
+        rotationSpeed = (rng.nextDouble() - 0.5) * 8,
+        shape = rng.nextInt(3);
+
+  static const _colors = [
+    Color(0xFFFF6B6B),
+    Color(0xFFFFD93D),
+    Color(0xFF6BCB77),
+    Color(0xFF4D96FF),
+    Color(0xFFFF6FB7),
+    Color(0xFFA66CFF),
+    Color(0xFFFF9F43),
+  ];
+}
+
+// ── 컨페티 페인터 ──
+
+class _ConfettiPainter extends CustomPainter {
+  final List<_ConfettiParticle> particles;
+  final double progress;
+
+  _ConfettiPainter({required this.particles, required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final p in particles) {
+      final t = ((progress - p.delay) / (1.0 - p.delay)).clamp(0.0, 1.0);
+      if (t <= 0) continue;
+
+      final opacity = t < 0.7 ? 1.0 : ((1.0 - t) / 0.3);
+      final x = p.x * size.width + sin(t * pi * 3) * p.drift;
+      final y = -20 + t * (size.height + 40) * p.speed;
+
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(p.rotationSpeed * t * pi);
+
+      final paint = Paint()
+        ..color = p.color.withOpacity(opacity.clamp(0.0, 1.0))
+        ..style = PaintingStyle.fill;
+
+      switch (p.shape) {
+        case 0:
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromCenter(
+                center: Offset.zero,
+                width: p.size,
+                height: p.size * 0.6,
+              ),
+              const Radius.circular(1),
+            ),
+            paint,
+          );
+          break;
+        case 1:
+          canvas.drawCircle(Offset.zero, p.size * 0.4, paint);
+          break;
+        case 2:
+          final path = Path()
+            ..moveTo(0, -p.size * 0.4)
+            ..lineTo(p.size * 0.35, p.size * 0.3)
+            ..lineTo(-p.size * 0.35, p.size * 0.3)
+            ..close();
+          canvas.drawPath(path, paint);
+          break;
+      }
+
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConfettiPainter old) =>
+      old.progress != progress;
 }
