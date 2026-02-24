@@ -98,7 +98,8 @@ class MainAppScreen extends StatefulWidget {
   State<MainAppScreen> createState() => MainAppScreenState();
 }
 
-class MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserver {
+class MainAppScreenState extends State<MainAppScreen>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
 
@@ -168,10 +169,7 @@ class MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserve
               final opacity = value.clamp(0.0, 1.0);
               return Opacity(
                 opacity: opacity,
-                child: Transform.scale(
-                  scale: scale,
-                  child: child,
-                ),
+                child: Transform.scale(scale: scale, child: child),
               );
             },
             child: _pages[index],
@@ -187,10 +185,7 @@ class MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserve
         currentIndex: _selectedIndex,
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
-            label: "",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: ""),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: ""),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
         ],

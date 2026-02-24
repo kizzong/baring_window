@@ -15,7 +15,10 @@
       "Bash(dir:*)",
       "Bash(dart pub add:*)",
       "Bash(ls:*)",
-      "Bash(flutter build:*)"
+      "Bash(flutter build:*)",
+      "Bash(xxd:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(xcrun simctl spawn:*)"
     ]
   }
 }

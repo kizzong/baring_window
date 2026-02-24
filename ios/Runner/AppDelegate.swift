@@ -3,6 +3,7 @@ import UIKit
 import UserNotifications
 import AVFoundation
 import EventKit
+import WidgetKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -64,5 +65,12 @@ import EventKit
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    if #available(iOS 14.0, *) {
+      WidgetCenter.shared.reloadAllTimelines()
+    }
   }
 }

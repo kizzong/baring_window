@@ -60,6 +60,7 @@ class WidgetService {
           await HomeWidget.updateWidget(androidName: 'SmallHomeWidgetProvider');
         } else if (Platform.isIOS) {
           await HomeWidget.updateWidget(iOSName: 'BaringWidget');
+          await Future.delayed(const Duration(milliseconds: 200));
           await HomeWidget.updateWidget(iOSName: 'BaringSmallWidget');
         }
       }

@@ -167,96 +167,82 @@ func gradientColors(for preset: Int) -> [Color] {
 
 struct BaringWidgetEntryView : View {
     var entry: Provider.Entry
-    
+
     var body: some View {
-        GeometryReader { geometry in
-            VStack(alignment: .leading, spacing: 0) {
-                // 상단: 목표 뱃지 + 응원 이미지
-                HStack {
-                    Text("목표")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.white.opacity(0.18))
-                        .cornerRadius(10)
+        VStack(alignment: .leading, spacing: 0) {
+            // 상단: 제목 + D-Day (baseline 정렬)
+            HStack(alignment: .lastTextBaseline) {
+                Text(entry.title)
+                    .font(.system(size: 24, weight: .black))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
 
-                    Spacer()
+                Spacer(minLength: 8)
 
-                    Image("cheering2_face")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 40, height: 40)
-                        .opacity(0.85)
-                }
-                .frame(height: 40)
-
-                Spacer()
-                    .frame(height: 2)
-
-                // 중단: 제목과 D-Day
-                HStack(alignment: .center, spacing: 6) {
-                    Text(entry.title)
-                        .font(.system(size: 24, weight: .black))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.4)
-
-                    Spacer(minLength: 2)
-
+                VStack(alignment: .trailing, spacing: 2) {
                     Text(entry.dday)
                         .font(.system(size: 40, weight: .black))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+
+                    Image("cheering2_face")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 28, height: 28)
+                        .opacity(0.8)
                 }
-                .frame(height: geometry.size.height * 0.4)
-
-                Spacer(minLength: 0)
-
-
-                // 하단: 프로그레스
-                VStack(alignment: .trailing, spacing: 4) {
-                    // 퍼센트
-                    Text(entry.percent)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(height: 12)
-
-                    // 프로그레스 바
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 999)
-                            .fill(Color.white.opacity(0.25))
-                            .frame(height: 7)
-
-                        GeometryReader { geo in
-                            RoundedRectangle(cornerRadius: 999)
-                                .fill(Color.white)
-                                .frame(width: geo.size.width * CGFloat(entry.progress), height: 7)
-                        }
-                        .frame(height: 7)
-                    }
-                    .frame(height: 7)
-
-                    // 날짜
-                    HStack(spacing: 0) {
-                        Text(entry.startDate)
-                            .font(.system(size: 9, weight: .regular))
-                            .foregroundColor(.white)
-
-                        Spacer()
-
-                        Text(entry.targetDate)
-                            .font(.system(size: 9, weight: .regular))
-                            .foregroundColor(.white)
-                    }
-                    .frame(height: 12)
-                }
-                .frame(height: 44)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+
+            Spacer(minLength: 0)
+
+            // 하단: 퍼센트 + 프로그레스 바 + 날짜
+            VStack(spacing: 0) {
+                // 퍼센트 (오른쪽 정렬)
+                HStack {
+                    Spacer()
+                    Text(entry.percent)
+                        .font(.system(size: 13, weight: .black))
+                        .foregroundColor(.white)
+                }
+
+                Spacer().frame(height: 4)
+
+                // 프로그레스 바
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 999)
+                        .fill(Color.white.opacity(0.25))
+                        .frame(height: 8)
+
+                    GeometryReader { geo in
+                        RoundedRectangle(cornerRadius: 999)
+                            .fill(Color.white)
+                            .frame(width: geo.size.width * CGFloat(entry.progress), height: 8)
+                    }
+                    .frame(height: 8)
+                }
+                .frame(height: 8)
+
+                Spacer().frame(height: 8)
+
+                // 날짜
+                HStack {
+                    Text(entry.startDate)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Text(entry.targetDate)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(.white)
+                }
+            }
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 14)
         .widgetURL(URL(string: "baringapp://open"))
     }
 }
@@ -349,52 +335,45 @@ struct BaringSmallWidgetEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 상단: 목표 뱃지 + 응원 이미지
-            HStack {
-                Text("목표")
-                    .font(.system(size: 9, weight: .bold))
+            // 상단: 제목 + 응원 이미지
+            HStack(alignment: .lastTextBaseline) {
+                Text(entry.title)
+                    .font(.system(size: 16, weight: .black))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.18))
-                    .cornerRadius(8)
-                Spacer()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+
+                Spacer(minLength: 4)
+
                 Image("cheering2_face")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 30, height: 30)
-                    .opacity(0.85)
+                    .frame(width: 26, height: 26)
+                    .opacity(0.8)
             }
 
-            Spacer().frame(height: 4)
-
-            // 제목
-            Text(entry.title)
-                .font(.system(size: 14, weight: .black))
-                .foregroundColor(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-
-            Spacer().frame(height: 4)
+            Spacer().frame(height: 2)
 
             // D-Day
             Text(entry.dday)
-                .font(.system(size: 32, weight: .black))
+                .font(.system(size: 34, weight: .black))
                 .foregroundColor(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
 
             Spacer(minLength: 0)
 
-            // 하단: 진행률 바 + 퍼센트 + 마감일
-            VStack(alignment: .leading, spacing: 4) {
-                // 퍼센트
+            // 하단: 퍼센트 + 프로그레스 바 + 마감일
+            VStack(spacing: 0) {
+                // 퍼센트 (오른쪽 정렬)
                 HStack {
                     Spacer()
                     Text(entry.percent)
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 11, weight: .black))
                         .foregroundColor(.white)
                 }
+
+                Spacer().frame(height: 4)
 
                 // 프로그레스 바
                 ZStack(alignment: .leading) {
@@ -411,17 +390,20 @@ struct BaringSmallWidgetEntryView: View {
                 }
                 .frame(height: 6)
 
+                Spacer().frame(height: 6)
+
                 // 마감일
                 HStack {
                     Spacer()
                     Text(entry.targetDate)
-                        .font(.system(size: 9, weight: .regular))
+                        .font(.system(size: 10, weight: .regular))
                         .foregroundColor(.white.opacity(0.7))
                 }
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
         .widgetURL(URL(string: "baringapp://open"))
     }
 }
