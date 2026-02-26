@@ -18,7 +18,8 @@
       "Bash(flutter build:*)",
       "Bash(xxd:*)",
       "Bash(xcodebuild:*)",
-      "Bash(xcrun simctl spawn:*)"
+      "Bash(xcrun simctl spawn:*)",
+      "Bash(flutter run:*)"
     ]
   }
 }

@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import java.util.Calendar
 
 class MidnightWidgetUpdateReceiver : BroadcastReceiver() {
@@ -40,11 +41,29 @@ class MidnightWidgetUpdateReceiver : BroadcastReceiver() {
                 set(Calendar.MILLISECOND, 0)
             }
 
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                midnight.timeInMillis,
-                pendingIntent
-            )
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                    // 정확한 알람 권한이 없으면 비정확 알람 사용
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        midnight.timeInMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        midnight.timeInMillis,
+                        pendingIntent
+                    )
+                }
+            } catch (e: SecurityException) {
+                // 권한 없을 때 비정확 알람으로 fallback
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    midnight.timeInMillis,
+                    pendingIntent
+                )
+            }
         }
 
         private fun recalculateDDay(context: Context) {
