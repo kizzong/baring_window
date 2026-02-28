@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.net.Uri
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
@@ -12,6 +13,7 @@ import android.text.style.AbsoluteSizeSpan
 import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.RemoteViews
+import es.antonborri.home_widget.HomeWidgetBackgroundIntent
 import org.json.JSONArray
 
 class TodoWidgetProvider : es.antonborri.home_widget.HomeWidgetProvider() {
@@ -62,7 +64,7 @@ class TodoWidgetProvider : es.antonborri.home_widget.HomeWidgetProvider() {
                             val type = item.getString("type")
                             val title = item.getString("title")
                             val time = if (item.has("time")) item.getString("time") else null
-                            val icon = if (type == "routine") "↻ " else "☐ "
+                            val icon = "☐ "
 
                             val builder = SpannableStringBuilder("$icon $title")
                             if (type == "routine") {
@@ -89,6 +91,19 @@ class TodoWidgetProvider : es.antonborri.home_widget.HomeWidgetProvider() {
                             }
                             setTextViewText(itemIds[i], builder)
                             setViewVisibility(itemIds[i], View.VISIBLE)
+
+                            // 아이템별 클릭 → 백그라운드 콜백으로 완료 처리
+                            val toggleUri = if (type == "routine") {
+                                val routineId = item.optString("routineId", "")
+                                Uri.parse("baringWidget://toggle?type=routine&routineId=$routineId")
+                            } else {
+                                val todoIndex = item.optInt("todoIndex", -1)
+                                Uri.parse("baringWidget://toggle?type=todo&todoIndex=$todoIndex")
+                            }
+                            val toggleIntent = HomeWidgetBackgroundIntent.getBroadcast(
+                                context, toggleUri
+                            )
+                            setOnClickPendingIntent(itemIds[i], toggleIntent)
                         }
 
                         if (hasMore) {

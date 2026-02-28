@@ -54,6 +54,15 @@ class SmallHomeWidgetProvider : HomeWidgetProvider() {
                 val targetDate = widgetData.getString("target_date", "2024/12/31") ?: "2024/12/31"
                 setTextViewText(R.id.small_target_date_text, targetDate)
 
+                // 캐릭터 표정 (3일 미접속 시 실망 표정)
+                val widgetFace = widgetData.getString("widget_face", "cheering2_face") ?: "cheering2_face"
+                val faceResId = if (widgetFace == "disappointed_face") {
+                    R.drawable.disappointed_face
+                } else {
+                    R.drawable.cheering2_face
+                }
+                setImageViewResource(R.id.small_cheering_image, faceResId)
+
                 // 클릭 시 앱 열기
                 val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
                 val pendingIntent = PendingIntent.getActivity(

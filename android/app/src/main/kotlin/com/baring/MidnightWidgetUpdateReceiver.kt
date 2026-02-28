@@ -15,6 +15,7 @@ class MidnightWidgetUpdateReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         recalculateDDay(context)
         clearTodoWidget(context)
+        updateFaceState(context)
         notifyAllWidgets(context)
         scheduleMidnightAlarm(context)
     }
@@ -131,6 +132,45 @@ class MidnightWidgetUpdateReceiver : BroadcastReceiver() {
                 putInt("widget_items_count", 0)
                 putInt("widget_items_total", 0)
                 apply()
+            }
+        }
+
+        private fun updateFaceState(context: Context) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val lastAppOpen = prefs.getString("last_app_open", null) ?: return
+
+            try {
+                // ISO 8601 형식 파싱 (예: 2026-02-26T14:30:00.000)
+                val parts = lastAppOpen.split("T")
+                if (parts.isEmpty()) return
+                val dateParts = parts[0].split("-")
+                if (dateParts.size != 3) return
+
+                val year = dateParts[0].toIntOrNull() ?: return
+                val month = dateParts[1].toIntOrNull() ?: return
+                val day = dateParts[2].toIntOrNull() ?: return
+
+                val lastOpenCal = Calendar.getInstance().apply {
+                    set(year, month - 1, day, 0, 0, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                val today = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                val diffDays = ((today.timeInMillis - lastOpenCal.timeInMillis) / (1000 * 60 * 60 * 24)).toInt()
+                val face = if (diffDays >= 3) "disappointed_face" else "cheering2_face"
+
+                prefs.edit().apply {
+                    putString("widget_face", face)
+                    apply()
+                }
+            } catch (e: Exception) {
+                // 파싱 실패 시 무시
             }
         }
 

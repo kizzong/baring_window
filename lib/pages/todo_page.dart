@@ -35,6 +35,22 @@ class _TodoPageState extends State<TodoPage> {
     super.initState();
     _loadTodos();
     _loadRoutines();
+    WidgetService.dataVersion.addListener(_onDataVersionChanged);
+  }
+
+  @override
+  void dispose() {
+    WidgetService.dataVersion.removeListener(_onDataVersionChanged);
+    super.dispose();
+  }
+
+  void _onDataVersionChanged() {
+    if (mounted) {
+      setState(() {
+        _loadTodos();
+        _loadRoutines();
+      });
+    }
   }
 
   String _dayKey(DateTime day) {

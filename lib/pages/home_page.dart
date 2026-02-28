@@ -41,18 +41,32 @@ class _HomePageState extends State<HomePage>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
+    _refreshAnalysis();
+    WidgetService.dataVersion.addListener(_onWidgetDataChanged);
+  }
+
+  @override
+  void dispose() {
+    WidgetService.dataVersion.removeListener(_onWidgetDataChanged);
+    _analysisAnimController.dispose();
+    super.dispose();
+  }
+
+  void _onWidgetDataChanged() {
+    if (mounted) {
+      setState(() {
+        _refreshAnalysis();
+      });
+    }
+  }
+
+  void _refreshAnalysis() {
     final data = _todayCompletion();
     final total = data['total']!;
     final completed = data['completed']!;
     _analysisFrom = 0.0;
     _analysisTarget = total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0;
-    _analysisAnimController.forward();
-  }
-
-  @override
-  void dispose() {
-    _analysisAnimController.dispose();
-    super.dispose();
+    _analysisAnimController.forward(from: 0.0);
   }
 
   // ── 오늘 진행도 계산 (할일 + 루틴) ──

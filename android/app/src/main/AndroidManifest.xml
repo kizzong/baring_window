@@ -83,6 +83,14 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/todo_widget" />
         </receiver>
+        <!-- 위젯 백그라운드 인터랙션 리시버 -->
+        <receiver
+            android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.BACKGROUND" />
+            </intent-filter>
+        </receiver>
         <!-- 자정 위젯 업데이트 리시버 -->
         <receiver
             android:name=".MidnightWidgetUpdateReceiver"

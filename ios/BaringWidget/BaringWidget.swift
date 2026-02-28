@@ -84,34 +84,37 @@
 // }
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), 
+        SimpleEntry(date: Date(),
                    title: "목표 설정",
                    dday: "D-0",
                    percent: "0%",
                    progress: 0.0,
                    startDate: "2024/01/01",
                    targetDate: "2024/12/31",
-                   selectedPreset: 0)
+                   selectedPreset: 0,
+                   widgetFace: "cheering2_face")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), 
+        let entry = SimpleEntry(date: Date(),
                                title: "목표 설정",
                                dday: "D-0",
                                percent: "0%",
                                progress: 0.0,
                                startDate: "2024/01/01",
                                targetDate: "2024/12/31",
-                               selectedPreset: 0)
+                               selectedPreset: 0,
+                               widgetFace: "cheering2_face")
         completion(entry)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
         let sharedDefaults = UserDefaults(suiteName: "group.baringWidget")
-        
+
         let title = sharedDefaults?.string(forKey: "title_text") ?? "목표 설정"
         let dday = sharedDefaults?.string(forKey: "dday_text") ?? "D-0"
         let percent = sharedDefaults?.string(forKey: "percent_text") ?? "0%"
@@ -119,9 +122,33 @@ struct Provider: TimelineProvider {
         let startDate = sharedDefaults?.string(forKey: "start_date") ?? "2024/01/01"
         let targetDate = sharedDefaults?.string(forKey: "target_date") ?? "2024/12/31"
         let selectedPreset = sharedDefaults?.integer(forKey: "selected_preset") ?? 0
-        
+
         let progress = Double(progressValue) / 100.0
-        
+
+        // 3일 미접속 시 실망 표정 계산
+        var widgetFace = sharedDefaults?.string(forKey: "widget_face") ?? "cheering2_face"
+        if let lastAppOpenStr = sharedDefaults?.string(forKey: "last_app_open") {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            // ISO8601 파싱 시도 (fractionalSeconds 있는 경우와 없는 경우)
+            var lastDate: Date? = formatter.date(from: lastAppOpenStr)
+            if lastDate == nil {
+                formatter.formatOptions = [.withInternetDateTime]
+                lastDate = formatter.date(from: lastAppOpenStr)
+            }
+            if lastDate == nil {
+                // Dart의 toIso8601String() 형식 수동 파싱 (예: 2026-02-26T14:30:00.000)
+                let df = DateFormatter()
+                df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+                df.locale = Locale(identifier: "en_US_POSIX")
+                lastDate = df.date(from: lastAppOpenStr)
+            }
+            if let lastOpen = lastDate {
+                let days = Calendar.current.dateComponents([.day], from: lastOpen, to: Date()).day ?? 0
+                widgetFace = days >= 3 ? "disappointed_face" : "cheering2_face"
+            }
+        }
+
         let entry = SimpleEntry(date: Date(),
                                title: title,
                                dday: dday,
@@ -129,8 +156,9 @@ struct Provider: TimelineProvider {
                                progress: progress,
                                startDate: startDate,
                                targetDate: targetDate,
-                               selectedPreset: selectedPreset)
-        
+                               selectedPreset: selectedPreset,
+                               widgetFace: widgetFace)
+
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
@@ -146,6 +174,7 @@ struct SimpleEntry: TimelineEntry {
     let startDate: String
     let targetDate: String
     let selectedPreset: Int
+    let widgetFace: String
 }
 
 // 색상 프리셋 정의 (위젯 본체 + containerBackground 양쪽에서 사용)
@@ -187,7 +216,7 @@ struct BaringWidgetEntryView : View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
 
-                    Image("cheering2_face")
+                    Image(entry.widgetFace)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 28, height: 28)
@@ -307,7 +336,8 @@ struct BaringWidget_Previews: PreviewProvider {
                 progress: 0.7,
                 startDate: "2024/01/01",
                 targetDate: "2024/12/31",
-                selectedPreset: 0
+                selectedPreset: 0,
+                widgetFace: "cheering2_face"
             ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
             .previewDisplayName("기본 하늘")
@@ -320,7 +350,8 @@ struct BaringWidget_Previews: PreviewProvider {
                 progress: 0.95,
                 startDate: "2024/01/01",
                 targetDate: "2024/12/31",
-                selectedPreset: 2
+                selectedPreset: 2,
+                widgetFace: "cheering2_face"
             ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
             .previewDisplayName("빨강")
@@ -345,7 +376,7 @@ struct BaringSmallWidgetEntryView: View {
 
                 Spacer(minLength: 4)
 
-                Image("cheering2_face")
+                Image(entry.widgetFace)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 26, height: 26)
@@ -440,7 +471,8 @@ struct BaringSmallWidget_Previews: PreviewProvider {
                 progress: 0.7,
                 startDate: "2024/01/01",
                 targetDate: "2024/12/31",
-                selectedPreset: 0
+                selectedPreset: 0,
+                widgetFace: "cheering2_face"
             ))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
             .previewDisplayName("2x2 파랑")
@@ -453,7 +485,8 @@ struct BaringSmallWidget_Previews: PreviewProvider {
                 progress: 1.0,
                 startDate: "2024/01/01",
                 targetDate: "2024/12/31",
-                selectedPreset: 4
+                selectedPreset: 4,
+                widgetFace: "cheering2_face"
             ))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
             .previewDisplayName("2x2 보라")
@@ -468,20 +501,22 @@ struct WidgetItem: Identifiable {
     let type: String   // "todo" or "routine"
     let title: String
     let time: String?
+    let routineId: String?
+    let todoIndex: Int?
 }
 
 struct TodoProvider: TimelineProvider {
     func placeholder(in context: Context) -> TodoEntry {
         TodoEntry(date: Date(), items: [
-            WidgetItem(id: 0, type: "todo", title: "할 일 1", time: "09:00"),
-            WidgetItem(id: 1, type: "routine", title: "루틴 1", time: nil),
+            WidgetItem(id: 0, type: "todo", title: "할 일 1", time: "09:00", routineId: nil, todoIndex: 0),
+            WidgetItem(id: 1, type: "routine", title: "루틴 1", time: nil, routineId: "0", todoIndex: nil),
         ], count: 2, total: 3)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TodoEntry) -> ()) {
         let entry = TodoEntry(date: Date(), items: [
-            WidgetItem(id: 0, type: "todo", title: "할 일 1", time: "09:00"),
-            WidgetItem(id: 1, type: "routine", title: "루틴 1", time: nil),
+            WidgetItem(id: 0, type: "todo", title: "할 일 1", time: "09:00", routineId: nil, todoIndex: 0),
+            WidgetItem(id: 1, type: "routine", title: "루틴 1", time: nil, routineId: "0", todoIndex: nil),
         ], count: 2, total: 3)
         completion(entry)
     }
@@ -494,12 +529,14 @@ struct TodoProvider: TimelineProvider {
 
         var items: [WidgetItem] = []
         if let data = jsonStr.data(using: .utf8),
-           let array = try? JSONSerialization.jsonObject(with: data) as? [[String: String]] {
+           let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
             for (index, dict) in array.enumerated() {
-                let type = dict["type"] ?? "todo"
-                let title = dict["title"] ?? ""
-                let time = dict["time"]
-                items.append(WidgetItem(id: index, type: type, title: title, time: time))
+                let type = dict["type"] as? String ?? "todo"
+                let title = dict["title"] as? String ?? ""
+                let time = dict["time"] as? String
+                let routineId = dict["routineId"] as? String
+                let todoIndex = dict["todoIndex"] as? Int
+                items.append(WidgetItem(id: index, type: type, title: title, time: time, routineId: routineId, todoIndex: todoIndex))
             }
         }
 
@@ -515,6 +552,81 @@ struct TodoEntry: TimelineEntry {
     let items: [WidgetItem]
     let count: Int
     let total: Int
+}
+
+// MARK: - 할 일 위젯 인터랙션 (iOS 17+)
+
+@available(iOS 17.0, *)
+struct ToggleTodoIntent: AppIntent {
+    static var title: LocalizedStringResource = "할 일 완료"
+
+    @Parameter(title: "Item Type")
+    var itemType: String
+
+    @Parameter(title: "Routine ID")
+    var routineId: String?
+
+    @Parameter(title: "Todo Index")
+    var todoIndex: Int?
+
+    init() {}
+
+    init(itemType: String, routineId: String?, todoIndex: Int?) {
+        self.itemType = itemType
+        self.routineId = routineId
+        self.todoIndex = todoIndex
+    }
+
+    func perform() async throws -> some IntentResult {
+        let sharedDefaults = UserDefaults(suiteName: "group.baringWidget")
+
+        // 1. widget_items_json에서 해당 아이템 제거
+        let jsonStr = sharedDefaults?.string(forKey: "widget_items_json") ?? "[]"
+        if let data = jsonStr.data(using: .utf8),
+           var array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+
+            // 매칭되는 아이템 찾아서 제거
+            array.removeAll { dict in
+                let type = dict["type"] as? String ?? ""
+                if type == "routine" && itemType == "routine" {
+                    return (dict["routineId"] as? String) == routineId
+                } else if type == "todo" && itemType == "todo" {
+                    return (dict["todoIndex"] as? Int) == todoIndex
+                }
+                return false
+            }
+
+            // 업데이트된 JSON 저장
+            if let updatedData = try? JSONSerialization.data(withJSONObject: array),
+               let updatedStr = String(data: updatedData, encoding: .utf8) {
+                sharedDefaults?.set(updatedStr, forKey: "widget_items_json")
+            }
+            sharedDefaults?.set(array.count, forKey: "widget_items_count")
+        }
+
+        // 2. pending_widget_toggles에 추가 (앱 복귀 시 Hive 동기화용)
+        let pendingStr = sharedDefaults?.string(forKey: "pending_widget_toggles") ?? "[]"
+        var pendingArray: [[String: Any]] = []
+        if let pendingData = pendingStr.data(using: .utf8),
+           let existing = try? JSONSerialization.jsonObject(with: pendingData) as? [[String: Any]] {
+            pendingArray = existing
+        }
+
+        var toggleEntry: [String: Any] = ["type": itemType]
+        if let rid = routineId { toggleEntry["routineId"] = rid }
+        if let tidx = todoIndex { toggleEntry["todoIndex"] = tidx }
+        pendingArray.append(toggleEntry)
+
+        if let pendingData = try? JSONSerialization.data(withJSONObject: pendingArray),
+           let pendingUpdatedStr = String(data: pendingData, encoding: .utf8) {
+            sharedDefaults?.set(pendingUpdatedStr, forKey: "pending_widget_toggles")
+        }
+
+        // 3. 위젯 타임라인 갱신
+        WidgetCenter.shared.reloadTimelines(ofKind: "TodoWidget")
+
+        return .result()
+    }
 }
 
 struct TodoWidgetEntryView: View {
@@ -561,24 +673,7 @@ struct TodoWidgetEntryView: View {
 
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(visibleItems) { item in
-                        HStack(alignment: .top, spacing: 6) {
-                            Image(systemName: item.type == "routine" ? "arrow.trianglehead.2.clockwise" : "square")
-                                .font(.system(size: 10))
-                                .foregroundColor(item.type == "routine" ? Color(hex: "34D399") : .white.opacity(0.5))
-                                .padding(.top, 2)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(item.title)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                if let time = item.time, !time.isEmpty {
-                                    Text(time)
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.white.opacity(0.4))
-                                }
-                            }
-                        }
+                        todoItemRow(item: item)
                     }
                     if hasMore {
                         Text("... 외 \(entry.items.count - visibleItems.count)개")
@@ -592,6 +687,41 @@ struct TodoWidgetEntryView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .widgetURL(URL(string: "baringapp://open"))
+    }
+
+    @ViewBuilder
+    private func todoItemRow(item: WidgetItem) -> some View {
+        let itemContent = HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "square")
+                .font(.system(size: 10))
+                .foregroundColor(item.type == "routine" ? Color(hex: "34D399") : .white.opacity(0.5))
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.title)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                if let time = item.time, !time.isEmpty {
+                    Text(time)
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.4))
+                }
+            }
+        }
+
+        if #available(iOS 17, *) {
+            Button(intent: ToggleTodoIntent(
+                itemType: item.type,
+                routineId: item.routineId,
+                todoIndex: item.todoIndex
+            )) {
+                itemContent
+            }
+            .buttonStyle(.plain)
+        } else {
+            itemContent
+        }
     }
 }
 
@@ -618,9 +748,9 @@ struct TodoWidget_Previews: PreviewProvider {
             TodoWidgetEntryView(entry: TodoEntry(
                 date: Date(),
                 items: [
-                    WidgetItem(id: 0, type: "todo", title: "공부하기", time: "09:00"),
-                    WidgetItem(id: 1, type: "routine", title: "운동", time: nil),
-                    WidgetItem(id: 2, type: "todo", title: "책 읽기", time: "14:30"),
+                    WidgetItem(id: 0, type: "todo", title: "공부하기", time: "09:00", routineId: nil, todoIndex: 0),
+                    WidgetItem(id: 1, type: "routine", title: "운동", time: nil, routineId: "1", todoIndex: nil),
+                    WidgetItem(id: 2, type: "todo", title: "책 읽기", time: "14:30", routineId: nil, todoIndex: 1),
                 ],
                 count: 3,
                 total: 5

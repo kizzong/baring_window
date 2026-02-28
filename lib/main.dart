@@ -16,6 +16,12 @@ import 'package:hive_flutter/adapters.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+/// 위젯 인터랙션 백그라운드 콜백
+@pragma("vm:entry-point")
+Future<void> widgetInteractivityCallback(Uri? uri) async {
+  await WidgetService.toggleWidgetItem(uri);
+}
+
 /// 전역 다크모드 상태
 final ValueNotifier<bool> isDarkMode = ValueNotifier<bool>(true);
 
@@ -27,6 +33,9 @@ void main() async {
 
   await Hive.openBox('baring');
 
+  // 위젯 인터랙션 콜백 등록
+  HomeWidget.registerInteractivityCallback(widgetInteractivityCallback);
+
   // Hive에서 다크모드 설정 로드
   final box = Hive.box('baring');
   isDarkMode.value = box.get('isDarkMode', defaultValue: true);
@@ -36,7 +45,11 @@ void main() async {
     await HomeWidget.setAppGroupId('group.baringWidget');
   }
 
-  // 위젯 초기화 ⭐
+  // 위젯에서 체크한 pending 토글을 Hive에 먼저 반영
+  await WidgetService.processPendingToggles();
+
+  // 앱 접속 시간 저장 + 위젯 초기화 ⭐
+  await WidgetService.saveLastAppOpen();
   await WidgetService.updateWidget(); // D-Day 위젯
   await WidgetService.syncWidget(); // 할 일 위젯
 
@@ -134,11 +147,18 @@ class MainAppScreenState extends State<MainAppScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // 앱이 포그라운드로 돌아올 때 위젯 동기화
-      WidgetService.updateWidget();
-      WidgetService.syncWidget();
-      NotificationService.refreshDailyNotifications();
+      _handleResumed();
     }
+  }
+
+  Future<void> _handleResumed() async {
+    // 위젯에서 처리된 pending 토글을 Hive에 먼저 반영
+    await WidgetService.processPendingToggles();
+    // 앱이 포그라운드로 돌아올 때 접속 시간 저장 + 위젯 동기화
+    WidgetService.saveLastAppOpen();
+    WidgetService.updateWidget();
+    WidgetService.syncWidget();
+    NotificationService.refreshDailyNotifications();
   }
 
   @override

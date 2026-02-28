@@ -19,7 +19,8 @@
       "Bash(xxd:*)",
       "Bash(xcodebuild:*)",
       "Bash(xcrun simctl spawn:*)",
-      "Bash(flutter run:*)"
+      "Bash(flutter run:*)",
+      "Bash(xargs ls:*)"
     ]
   }
 }
