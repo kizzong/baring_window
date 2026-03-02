@@ -27,28 +27,27 @@ final ValueNotifier<bool> isDarkMode = ValueNotifier<bool>(true);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting();
 
-  await Hive.initFlutter();
+  try {
+    await initializeDateFormatting();
+    await Hive.initFlutter();
+    await Hive.openBox('baring');
 
-  await Hive.openBox('baring');
+    // 위젯 인터랙션 콜백 등록
+    HomeWidget.registerInteractivityCallback(widgetInteractivityCallback);
 
-  // 위젯 인터랙션 콜백 등록
-  HomeWidget.registerInteractivityCallback(widgetInteractivityCallback);
+    // Hive에서 다크모드 설정 로드
+    final box = Hive.box('baring');
+    isDarkMode.value = box.get('isDarkMode', defaultValue: true);
 
-  // Hive에서 다크모드 설정 로드
-  final box = Hive.box('baring');
-  isDarkMode.value = box.get('isDarkMode', defaultValue: true);
-
-  // iOS App Group 설정 (위젯과 앱 간 데이터 공유에 필수) ⭐
-  if (Platform.isIOS) {
-    await HomeWidget.setAppGroupId('group.baringWidget');
+    // iOS App Group 설정 (위젯과 앱 간 데이터 공유에 필수) ⭐
+    if (Platform.isIOS) {
+      await HomeWidget.setAppGroupId('group.baringWidget');
+    }
+  } catch (e) {
+    debugPrint('main init error: $e');
   }
 
-  // ⭐⭐⭐ 테스트용: 온보딩 리셋 (테스트 끝나면 삭제하세요!)
-  // await OnboardingService.resetOnboarding();
-
-  // runApp을 먼저 호출하여 스플래시 화면 멈춤 방지
   runApp(MyApp());
 }
 
@@ -67,12 +66,16 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initServices() async {
-    await WidgetService.processPendingToggles();
-    await WidgetService.saveLastAppOpen();
-    await WidgetService.updateWidget();
-    await WidgetService.syncWidget();
-    await NotificationService.init();
-    await NotificationService.refreshDailyNotifications();
+    try {
+      await WidgetService.processPendingToggles();
+      await WidgetService.saveLastAppOpen();
+      await WidgetService.updateWidget();
+      await WidgetService.syncWidget();
+      await NotificationService.init();
+      await NotificationService.refreshDailyNotifications();
+    } catch (e) {
+      debugPrint('initServices error: $e');
+    }
   }
 
   @override
