@@ -45,21 +45,10 @@ void main() async {
     await HomeWidget.setAppGroupId('group.baringWidget');
   }
 
-  // 위젯에서 체크한 pending 토글을 Hive에 먼저 반영
-  await WidgetService.processPendingToggles();
-
-  // 앱 접속 시간 저장 + 위젯 초기화 ⭐
-  await WidgetService.saveLastAppOpen();
-  await WidgetService.updateWidget(); // D-Day 위젯
-  await WidgetService.syncWidget(); // 할 일 위젯
-
-  // 알림 초기화
-  await NotificationService.init();
-  await NotificationService.refreshDailyNotifications();
-
   // ⭐⭐⭐ 테스트용: 온보딩 리셋 (테스트 끝나면 삭제하세요!)
   // await OnboardingService.resetOnboarding();
 
+  // runApp을 먼저 호출하여 스플래시 화면 멈춤 방지
   runApp(MyApp());
 }
 
@@ -71,6 +60,21 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    _initServices();
+  }
+
+  Future<void> _initServices() async {
+    await WidgetService.processPendingToggles();
+    await WidgetService.saveLastAppOpen();
+    await WidgetService.updateWidget();
+    await WidgetService.syncWidget();
+    await NotificationService.init();
+    await NotificationService.refreshDailyNotifications();
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasSeenOnboarding = OnboardingService.hasSeenOnboarding();
