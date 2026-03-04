@@ -175,6 +175,7 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
   // ── 빌드 ──
 
   DateTime _selectedMonth = DateTime.now();
+  int _monthSlideDirection = 1; // 1: 오른쪽→왼쪽(다음달), -1: 왼쪽→오른쪽(이전달)
 
   @override
   Widget build(BuildContext context) {
@@ -611,6 +612,7 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
             GestureDetector(
               onTap: () {
                 setState(() {
+                  _monthSlideDirection = -1;
                   _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
                 });
               },
@@ -638,6 +640,7 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
                 final next = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
                 if (next.isBefore(DateTime.now()) || next.year == now.year && next.month == now.month) {
                   setState(() {
+                    _monthSlideDirection = 1;
                     _selectedMonth = next;
                   });
                 }
@@ -654,95 +657,112 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: c.cardBg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: c.borderColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 월 요약
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: c.scaffoldBg,
-                  borderRadius: BorderRadius.circular(12),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final isNewChild = child.key == ValueKey('${_selectedMonth.year}-${_selectedMonth.month}');
+            final offset = Tween<Offset>(
+              begin: Offset(isNewChild ? _monthSlideDirection * 0.15 : -_monthSlideDirection * 0.15, 0),
+              end: Offset.zero,
+            ).animate(animation);
+            return SlideTransition(
+              position: offset,
+              child: FadeTransition(opacity: animation, child: child),
+            );
+          },
+          child: Container(
+            key: ValueKey('${_selectedMonth.year}-${_selectedMonth.month}'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: c.cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: c.borderColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 월 요약
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: c.scaffoldBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Column(
+                        children: [
+                          Text(
+                            '$monthRate%',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: monthRate >= 70
+                                  ? const Color(0xFF22C55E)
+                                  : monthRate >= 40
+                                      ? const Color(0xFFFBBF24)
+                                      : const Color(0xFFEF4444),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '완료율',
+                            style: TextStyle(fontSize: 12, color: c.textSecondary),
+                          ),
+                        ],
+                      ),
+                      Container(width: 1, height: 40, color: c.borderColor),
+                      Column(
+                        children: [
+                          Text(
+                            '$monthCompleted',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: c.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '완료',
+                            style: TextStyle(fontSize: 12, color: c.textSecondary),
+                          ),
+                        ],
+                      ),
+                      Container(width: 1, height: 40, color: c.borderColor),
+                      Column(
+                        children: [
+                          Text(
+                            '$monthTotal',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: c.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '전체',
+                            style: TextStyle(fontSize: 12, color: c.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Column(
-                      children: [
-                        Text(
-                          '$monthRate%',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: monthRate >= 70
-                                ? const Color(0xFF22C55E)
-                                : monthRate >= 40
-                                    ? const Color(0xFFFBBF24)
-                                    : const Color(0xFFEF4444),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '완료율',
-                          style: TextStyle(fontSize: 12, color: c.textSecondary),
-                        ),
-                      ],
-                    ),
-                    Container(width: 1, height: 40, color: c.borderColor),
-                    Column(
-                      children: [
-                        Text(
-                          '$monthCompleted',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: c.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '완료',
-                          style: TextStyle(fontSize: 12, color: c.textSecondary),
-                        ),
-                      ],
-                    ),
-                    Container(width: 1, height: 40, color: c.borderColor),
-                    Column(
-                      children: [
-                        Text(
-                          '$monthTotal',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: c.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '전체',
-                          style: TextStyle(fontSize: 12, color: c.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 히트맵 그리드
-              _buildHeatmapGrid(c, dayData),
-              const SizedBox(height: 12),
-              // 범례
-              _buildHeatmapLegend(c),
-            ],
+                const SizedBox(height: 16),
+                // 히트맵 그리드
+                _buildHeatmapGrid(c, dayData),
+                const SizedBox(height: 12),
+                // 범례
+                _buildHeatmapLegend(c),
+              ],
+            ),
           ),
         ),
       ],
