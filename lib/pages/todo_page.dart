@@ -2407,11 +2407,43 @@ class _TodoPageState extends State<TodoPage> {
       backgroundColor: c.scaffoldBg,
       appBar: AppBar(
         backgroundColor: c.scaffoldBg,
-        centerTitle: true,
         elevation: 0,
-        title: const Text(
-          '할 일 관리',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _focusedDay = DateTime(
+                    _focusedDay.year,
+                    _focusedDay.month - 1,
+                  );
+                });
+              },
+              icon: Icon(Icons.chevron_left, color: c.textPrimary, size: 28),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              DateFormat('yyyy년 M월').format(_focusedDay),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _focusedDay = DateTime(
+                    _focusedDay.year,
+                    _focusedDay.month + 1,
+                  );
+                });
+              },
+              icon: Icon(Icons.chevron_right, color: c.textPrimary, size: 28),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ),
         actions: [
           GestureDetector(
@@ -2475,7 +2507,9 @@ class _TodoPageState extends State<TodoPage> {
               _showDayDetailSheet();
             },
             onPageChanged: (focusedDay) {
-              _focusedDay = focusedDay;
+              setState(() {
+                _focusedDay = focusedDay;
+              });
             },
             eventLoader: (day) {
               final todos = _getTodosForDay(day);
@@ -2484,6 +2518,7 @@ class _TodoPageState extends State<TodoPage> {
               return List.generate(count.clamp(0, 4), (_) => '');
             },
             calendarBuilders: CalendarBuilders(
+              headerTitleBuilder: (context, day) => const SizedBox.shrink(),
               defaultBuilder: (context, day, focusedDay) {
                 final isWeekend = day.weekday == DateTime.saturday ||
                     day.weekday == DateTime.sunday;
@@ -2535,22 +2570,16 @@ class _TodoPageState extends State<TodoPage> {
               ),
               markersMaxCount: 0,
             ),
-            headerStyle: HeaderStyle(
+            headerStyle: const HeaderStyle(
               formatButtonVisible: false,
-              titleCentered: true,
-              titleTextStyle: TextStyle(
-                color: c.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-              leftChevronIcon: Icon(
-                Icons.chevron_left,
-                color: c.textPrimary,
-              ),
-              rightChevronIcon: Icon(
-                Icons.chevron_right,
-                color: c.textPrimary,
-              ),
+              headerMargin: EdgeInsets.zero,
+              headerPadding: EdgeInsets.zero,
+              leftChevronPadding: EdgeInsets.zero,
+              rightChevronPadding: EdgeInsets.zero,
+              leftChevronMargin: EdgeInsets.zero,
+              rightChevronMargin: EdgeInsets.zero,
+              leftChevronIcon: SizedBox.shrink(),
+              rightChevronIcon: SizedBox.shrink(),
             ),
             daysOfWeekStyle: DaysOfWeekStyle(
               weekdayStyle: TextStyle(

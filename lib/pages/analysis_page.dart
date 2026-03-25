@@ -142,6 +142,8 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
       int current = 0;
       int max = 0;
       int streak = 0;
+      final completions = Map<String, dynamic>.from(r['completions'] ?? {});
+      final Set<String> completedKeys = {};
 
       // 최근 365일 체크
       for (int i = 0; i < 365; i++) {
@@ -151,8 +153,8 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
             (r['type'] == 'weekly' && (List<int>.from(r['days'] ?? [])).contains(weekday));
         if (!isActive) continue;
 
-        final completions = Map<String, dynamic>.from(r['completions'] ?? {});
         if (completions[_dateKey(d)] == true) {
+          completedKeys.add(_dateKey(d));
           streak++;
           if (i == 0 || current > 0) current = streak;
           if (streak > max) max = streak;
@@ -166,6 +168,9 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
         title: r['title'] ?? '',
         current: current,
         max: max,
+        completedKeys: completedKeys,
+        type: r['type'] ?? 'daily',
+        activeDays: List<int>.from(r['days'] ?? []),
       );
     }).toList()
       ..sort((a, b) => b.current.compareTo(a.current));
@@ -218,8 +223,8 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
                         ),
                         const SizedBox(height: 20),
 
-                        // 1. 오늘의 현황
-                        _buildTodayStatus(c),
+                        // 1. 월별 통계 (히트맵)
+                        _buildMonthlyHeatmap(c),
                         const SizedBox(height: 24),
 
                         // 2. 루틴 연속 기록
@@ -228,10 +233,6 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
 
                         // 3. 이번주 통계
                         _buildWeeklyStats(c, av),
-                        const SizedBox(height: 24),
-
-                        // 4. 월별 통계 (히트맵)
-                        _buildMonthlyHeatmap(c),
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -499,53 +500,353 @@ class _AnalysisPageState extends State<AnalysisPage> with SingleTickerProviderSt
               final isLast = entry.key == streaks.length - 1;
               return Padding(
                 padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(Icons.local_fire_department,
-                        size: 22,
-                        color: s.current > 0 ? const Color(0xFFF97316) : c.subtle),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        s.title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: c.textPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${s.current}일 연속',
+                child: GestureDetector(
+                  onTap: () => _showRoutineHistorySheet(s),
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(Icons.local_fire_department,
+                          size: 22,
+                          color: s.current > 0 ? const Color(0xFFF97316) : c.subtle),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          s.title,
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: s.current > 0 ? const Color(0xFFF97316) : c.textSecondary,
+                            fontWeight: FontWeight.w700,
+                            color: c.textPrimary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '최대 ${s.max}일',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: c.textSecondary,
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${s.current}일 연속',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: s.current > 0 ? const Color(0xFFF97316) : c.textSecondary,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          const SizedBox(height: 2),
+                          Text(
+                            '최대 ${s.max}일',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: c.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(Icons.chevron_right, size: 18, color: c.subtle),
+                    ],
+                  ),
                 ),
               );
             }).toList(),
           ),
         ),
       ],
+    );
+  }
+
+  void _showRoutineHistorySheet(_StreakData s) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final sheetC = ctx.colors;
+
+        // 최근 30일
+        final days = List.generate(
+          30,
+          (i) => today.subtract(Duration(days: 29 - i)),
+        );
+
+        // 30일 중 활성 날짜만 기준으로 달성률 계산
+        final activeDays = days.where((d) =>
+            s.type == 'daily' || s.activeDays.contains(d.weekday)).toList();
+        final doneDays = activeDays
+            .where((d) => s.completedKeys.contains(_dateKey(d)))
+            .length;
+        final rate = activeDays.isEmpty ? 0.0 : doneDays / activeDays.length;
+        final percent = (rate * 100).round();
+
+        // 달성률에 따른 색상
+        Color rateColor;
+        if (percent >= 80) {
+          rateColor = const Color(0xFF22C55E);
+        } else if (percent >= 50) {
+          rateColor = const Color(0xFFFBBF24);
+        } else if (percent > 0) {
+          rateColor = const Color(0xFFF97316);
+        } else {
+          rateColor = sheetC.subtle;
+        }
+
+        // 주 단위로 묶기 (월요일 시작)
+        final startDay = days.first;
+        final int padFront = (startDay.weekday - 1) % 7;
+        final List<DateTime?> cells = [
+          ...List.filled(padFront, null),
+          ...days,
+        ];
+        while (cells.length % 7 != 0) { cells.add(null); }
+
+        final weeks = <List<DateTime?>>[];
+        for (int i = 0; i < cells.length; i += 7) {
+          weeks.add(cells.sublist(i, i + 7));
+        }
+
+        final dayLabels = ['월', '화', '수', '목', '금', '토', '일'];
+
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetC.cardBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 핸들
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: sheetC.subtle.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 제목
+              Row(
+                children: [
+                  Icon(Icons.local_fire_department,
+                      size: 22,
+                      color: s.current > 0 ? const Color(0xFFF97316) : sheetC.subtle),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      s.title,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: sheetC.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // 칩 통계
+              Row(
+                children: [
+                  _chipStat(sheetC, '현재', '${s.current}일 연속',
+                      s.current > 0 ? const Color(0xFFF97316) : sheetC.textSecondary),
+                  const SizedBox(width: 8),
+                  _chipStat(sheetC, '최대', '${s.max}일', sheetC.primary),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // 30일 달성률 카드
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: sheetC.scaffoldBg,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '최근 30일',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: sheetC.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '$doneDays',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: rateColor,
+                          ),
+                        ),
+                        Text(
+                          ' / ${activeDays.length}일',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: sheetC.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$percent%',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: rateColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        value: rate,
+                        minHeight: 8,
+                        backgroundColor: sheetC.borderColor,
+                        valueColor: AlwaysStoppedAnimation(rateColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 요일 헤더
+              Row(
+                children: dayLabels.map((d) => Expanded(
+                  child: Center(
+                    child: Text(
+                      d,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: sheetC.textSecondary,
+                      ),
+                    ),
+                  ),
+                )).toList(),
+              ),
+              const SizedBox(height: 6),
+              // 달력 그리드
+              ...weeks.map((week) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: week.map((day) {
+                    if (day == null) {
+                      return const Expanded(child: SizedBox(height: 34));
+                    }
+                    final key = _dateKey(day);
+                    final isActive = s.type == 'daily' ||
+                        s.activeDays.contains(day.weekday);
+                    final isDone = s.completedKeys.contains(key);
+                    final isToday = day == today;
+
+                    Color bgColor;
+                    Color textColor;
+                    if (isDone) {
+                      bgColor = const Color(0xFFF97316);
+                      textColor = Colors.white;
+                    } else if (isActive) {
+                      bgColor = sheetC.borderColor;
+                      textColor = sheetC.textSecondary;
+                    } else {
+                      bgColor = Colors.transparent;
+                      textColor = sheetC.subtle.withOpacity(0.3);
+                    }
+
+                    return Expanded(
+                      child: Container(
+                        height: 34,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: isToday
+                              ? Border.all(color: sheetC.primary, width: 1.5)
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${day.day}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isDone ? FontWeight.w800 : FontWeight.w500,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              )),
+              const SizedBox(height: 10),
+              // 범례
+              Row(
+                children: [
+                  _legendDot(const Color(0xFFF97316)),
+                  const SizedBox(width: 4),
+                  Text('완료', style: TextStyle(fontSize: 12, color: sheetC.textSecondary)),
+                  const SizedBox(width: 12),
+                  _legendDot(sheetC.borderColor),
+                  const SizedBox(width: 4),
+                  Text('미완료', style: TextStyle(fontSize: 12, color: sheetC.textSecondary)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _chipStat(AppColors c, String label, String value, Color valueColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.scaffoldBg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: TextStyle(fontSize: 12, color: c.textSecondary)),
+          const SizedBox(width: 4),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: valueColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, {Color? border}) {
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+        border: border != null ? Border.all(color: border) : null,
+      ),
     );
   }
 
@@ -1064,10 +1365,16 @@ class _StreakData {
   final String title;
   final int current;
   final int max;
+  final Set<String> completedKeys; // 'yyyy-MM-dd' 형식
+  final String type; // 'daily' | 'weekly'
+  final List<int> activeDays; // weekly일 때 요일 목록
 
   _StreakData({
     required this.title,
     required this.current,
     required this.max,
+    required this.completedKeys,
+    required this.type,
+    required this.activeDays,
   });
 }
