@@ -1,5 +1,6 @@
-import 'package:animations/animations.dart';
+import 'dart:async';
 import 'package:baring_windows/main.dart';
+import 'package:baring_windows/services/notification_service.dart';
 import 'package:baring_windows/onboarding/on_boarding1.dart';
 import 'package:baring_windows/onboarding/on_boarding2.dart';
 import 'package:baring_windows/onboarding/on_boarding3.dart';
@@ -21,9 +22,6 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage> {
   final PageController _controller = PageController();
   int _currentPage = 0;
-  final ContainerTransitionType _transitionType =
-      ContainerTransitionType.fadeThrough;
-
   final GlobalKey<OnboardingPage4State> _page4Key = GlobalKey();
   final GlobalKey<OnboardingPage5State> _page5Key = GlobalKey();
 
@@ -122,6 +120,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 setState(() {
                   _currentPage = index;
                 });
+                if (index == 5) {
+                  Future.delayed(const Duration(seconds: 1), () {
+                    NotificationService.requestPermission();
+                  });
+                }
               },
               children: [
                 const OnboardingPage1(),
@@ -192,33 +195,41 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         Expanded(
                           child: SizedBox(
                             height: h * 0.068,
-                            child: OpenContainer(
-                              transitionType: _transitionType,
-                              transitionDuration: const Duration(milliseconds: 700),
-                              openBuilder: (context, action) {
+                            child: GestureDetector(
+                              onTap: () {
                                 OnboardingService.completeOnboarding();
-                                return const MainAppScreen();
-                              },
-                              closedElevation: 0,
-                              closedShape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              closedColor: const Color(0xFF3E7BFF),
-                              openColor: const Color(0xFF0B1623),
-                              middleColor: const Color(0xFF1E2F42),
-                              closedBuilder: (context, action) {
-                                return Container(
-                                  alignment: Alignment.center,
-                                  child: const Text(
-                                    '바링 시작하기',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  PageRouteBuilder(
+                                    pageBuilder: (context, animation, _) =>
+                                        const MainAppScreen(),
+                                    transitionsBuilder:
+                                        (context, animation, _, child) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: child,
+                                      );
+                                    },
+                                    transitionDuration:
+                                        const Duration(milliseconds: 500),
                                   ),
+                                  (route) => false,
                                 );
                               },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3E7BFF),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  '바링 시작하기',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),

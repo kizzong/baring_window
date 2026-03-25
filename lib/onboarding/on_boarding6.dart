@@ -1,30 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:baring_windows/services/notification_service.dart';
 
-class OnboardingPage6 extends StatefulWidget {
+class OnboardingPage6 extends StatelessWidget {
   const OnboardingPage6({super.key});
-
-  static Future<void> requestNotificationPermission() async {
-    await NotificationService.requestPermission();
-  }
-
-  @override
-  State<OnboardingPage6> createState() => _OnboardingPage6State();
-}
-
-class _OnboardingPage6State extends State<OnboardingPage6> {
-  bool _permissionRequested = false;
-
-  Future<void> _onPermissionTap() async {
-    try {
-      final granted = await NotificationService.requestPermission();
-      if (mounted) {
-        setState(() => _permissionRequested = granted);
-      }
-    } catch (_) {
-      // 권한 요청 실패 시 무시
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,10 +32,8 @@ class _OnboardingPage6State extends State<OnboardingPage6> {
                   color: primaryBlue.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  _permissionRequested
-                      ? Icons.notifications_active_rounded
-                      : Icons.notifications_none_rounded,
+                child: const Icon(
+                  Icons.notifications_none_rounded,
                   size: 50,
                   color: primaryBlue,
                 ),
@@ -87,42 +62,6 @@ class _OnboardingPage6State extends State<OnboardingPage6> {
                   height: 1.6,
                   color: Colors.white.withOpacity(0.55),
                   fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Permission button
-              SizedBox(
-                width: 220,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: _permissionRequested ? null : _onPermissionTap,
-                  icon: Icon(
-                    _permissionRequested
-                        ? Icons.check_circle_rounded
-                        : Icons.notifications_active_rounded,
-                    size: 22,
-                  ),
-                  label: Text(
-                    _permissionRequested ? '알림 허용 완료' : '알림 허용하기',
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _permissionRequested
-                        ? Colors.white.withOpacity(0.10)
-                        : primaryBlue,
-                    disabledBackgroundColor: Colors.white.withOpacity(0.10),
-                    foregroundColor: Colors.white,
-                    disabledForegroundColor: Colors.white.withOpacity(0.6),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
                 ),
               ),
 
