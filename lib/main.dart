@@ -24,7 +24,7 @@ Future<void> widgetInteractivityCallback(Uri? uri) async {
 }
 
 /// 전역 다크모드 상태
-final ValueNotifier<bool> isDarkMode = ValueNotifier<bool>(true);
+final ValueNotifier<bool> isDarkMode = ValueNotifier<bool>(false);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +44,7 @@ void main() async {
 
     // Hive에서 다크모드 설정 로드
     final box = Hive.box('baring');
-    isDarkMode.value = box.get('isDarkMode', defaultValue: true);
+    isDarkMode.value = box.get('isDarkMode', defaultValue: false);
   } catch (e) {
     debugPrint('main init error: $e');
   }
