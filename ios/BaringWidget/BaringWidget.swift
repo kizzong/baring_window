@@ -116,35 +116,67 @@ struct Provider: TimelineProvider {
         let sharedDefaults = UserDefaults(suiteName: "group.baringWidget")
 
         let title = sharedDefaults?.string(forKey: "title_text") ?? "목표 설정"
-        let dday = sharedDefaults?.string(forKey: "dday_text") ?? "D-0"
-        let percent = sharedDefaults?.string(forKey: "percent_text") ?? "0%"
-        let progressValue = sharedDefaults?.integer(forKey: "progress") ?? 0
-        let startDate = sharedDefaults?.string(forKey: "start_date") ?? "2024/01/01"
-        let targetDate = sharedDefaults?.string(forKey: "target_date") ?? "2024/12/31"
+        let startDateStr = sharedDefaults?.string(forKey: "start_date") ?? "2024/01/01"
+        let targetDateStr = sharedDefaults?.string(forKey: "target_date") ?? "2024/12/31"
         let selectedPreset = sharedDefaults?.integer(forKey: "selected_preset") ?? 0
 
-        let progress = Double(progressValue) / 100.0
+        // target_date(yyyy/MM/dd)로 D-Day · 진행률 직접 계산
+        let df = DateFormatter()
+        df.dateFormat = "yyyy/MM/dd"
+        df.locale = Locale(identifier: "en_US_POSIX")
+
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: Date())
+
+        var dday = "D-0"
+        var percent = "0%"
+        var progress = 0.0
+
+        if let targetDate = df.date(from: targetDateStr) {
+            let targetStart = cal.startOfDay(for: targetDate)
+            let remaining = cal.dateComponents([.day], from: todayStart, to: targetStart).day ?? 0
+            if remaining > 0 {
+                dday = "D-\(remaining)"
+            } else if remaining == 0 {
+                dday = "D-DAY"
+            } else {
+                dday = "완료"
+            }
+
+            if let startDate = df.date(from: startDateStr) {
+                let startStart = cal.startOfDay(for: startDate)
+                let totalDays = cal.dateComponents([.day], from: startStart, to: targetStart).day ?? 0
+                if totalDays > 0 {
+                    let passedDays = cal.dateComponents([.day], from: startStart, to: todayStart).day ?? 0
+                    let ratio = Double(passedDays) / Double(totalDays)
+                    let clamped = min(max(ratio, 0.0), 1.0)
+                    progress = clamped
+                    percent = "\(Int(clamped * 100))%"
+                } else {
+                    progress = 1.0
+                    percent = "100%"
+                }
+            }
+        }
 
         // 3일 미접속 시 실망 표정 계산
         var widgetFace = sharedDefaults?.string(forKey: "widget_face") ?? "cheering2_face"
         if let lastAppOpenStr = sharedDefaults?.string(forKey: "last_app_open") {
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            // ISO8601 파싱 시도 (fractionalSeconds 있는 경우와 없는 경우)
-            var lastDate: Date? = formatter.date(from: lastAppOpenStr)
+            let isoFormatter = ISO8601DateFormatter()
+            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            var lastDate: Date? = isoFormatter.date(from: lastAppOpenStr)
             if lastDate == nil {
-                formatter.formatOptions = [.withInternetDateTime]
-                lastDate = formatter.date(from: lastAppOpenStr)
+                isoFormatter.formatOptions = [.withInternetDateTime]
+                lastDate = isoFormatter.date(from: lastAppOpenStr)
             }
             if lastDate == nil {
-                // Dart의 toIso8601String() 형식 수동 파싱 (예: 2026-02-26T14:30:00.000)
-                let df = DateFormatter()
-                df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
-                df.locale = Locale(identifier: "en_US_POSIX")
-                lastDate = df.date(from: lastAppOpenStr)
+                let manualDf = DateFormatter()
+                manualDf.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+                manualDf.locale = Locale(identifier: "en_US_POSIX")
+                lastDate = manualDf.date(from: lastAppOpenStr)
             }
             if let lastOpen = lastDate {
-                let days = Calendar.current.dateComponents([.day], from: lastOpen, to: Date()).day ?? 0
+                let days = cal.dateComponents([.day], from: lastOpen, to: Date()).day ?? 0
                 widgetFace = days >= 3 ? "disappointed_face" : "cheering2_face"
             }
         }
@@ -154,13 +186,14 @@ struct Provider: TimelineProvider {
                                dday: dday,
                                percent: percent,
                                progress: progress,
-                               startDate: startDate,
-                               targetDate: targetDate,
+                               startDate: startDateStr,
+                               targetDate: targetDateStr,
                                selectedPreset: selectedPreset,
                                widgetFace: widgetFace)
 
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+        // 다음 자정에 타임라인 갱신 → 앱 없이도 D-Day가 매일 업데이트됨
+        let nextMidnight = cal.nextDate(after: Date(), matching: DateComponents(hour: 0, minute: 0, second: 0), matchingPolicy: .nextTime)!
+        let timeline = Timeline(entries: [entry], policy: .after(nextMidnight))
         completion(timeline)
     }
 }

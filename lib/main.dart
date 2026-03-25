@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:baring_windows/onboarding/on_boarding_service.dart';
@@ -122,6 +123,7 @@ class MainAppScreenState extends State<MainAppScreen>
     with WidgetsBindingObserver {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+  Timer? _midnightTimer;
 
   void navigateToTab(int index) {
     _pageController.animateToPage(
@@ -142,10 +144,26 @@ class MainAppScreenState extends State<MainAppScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scheduleMidnightRefresh();
+  }
+
+  void _scheduleMidnightRefresh() {
+    _midnightTimer?.cancel();
+    final now = DateTime.now();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    final duration = nextMidnight.difference(now);
+    _midnightTimer = Timer(duration, () {
+      if (mounted) {
+        setState(() {});
+        WidgetService.updateWidget();
+      }
+      _scheduleMidnightRefresh(); // 다음 자정 재등록
+    });
   }
 
   @override
   void dispose() {
+    _midnightTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
