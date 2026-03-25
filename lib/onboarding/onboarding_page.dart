@@ -78,6 +78,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   void _onButtonPressed() {
+    FocusScope.of(context).unfocus();
     switch (_currentPage) {
       case 0:
       case 1:
