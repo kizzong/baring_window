@@ -1,4 +1,6 @@
 {
+  "model": "sonnet",
+
   "permissions": {
     "allow": [
       "Bash(flutter analyze:*)",

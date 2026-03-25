@@ -782,9 +782,15 @@ class _EventCardState extends State<EventCard>
           const SizedBox(height: 8),
           Row(
             children: [
-              Text(fmtDate(widget.startDate)),
+              Text(
+                fmtDate(widget.startDate),
+                style: const TextStyle(color: Colors.white),
+              ),
               const Spacer(),
-              Text(fmtDate(widget.targetDate)),
+              Text(
+                fmtDate(widget.targetDate),
+                style: const TextStyle(color: Colors.white),
+              ),
             ],
           ),
         ],

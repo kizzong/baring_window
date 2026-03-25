@@ -33,17 +33,17 @@ void main() async {
     await Hive.initFlutter();
     await Hive.openBox('baring');
 
-    // 위젯 인터랙션 콜백 등록
+    // iOS App Group 설정 (위젯과 앱 간 데이터 공유에 필수) ⭐
+    if (Platform.isIOS) {
+      await HomeWidget.setAppGroupId('group.baringWidget');
+    }
+
+    // 위젯 인터랙션 콜백 등록 (App Group 설정 후에 호출해야 함)
     HomeWidget.registerInteractivityCallback(widgetInteractivityCallback);
 
     // Hive에서 다크모드 설정 로드
     final box = Hive.box('baring');
     isDarkMode.value = box.get('isDarkMode', defaultValue: true);
-
-    // iOS App Group 설정 (위젯과 앱 간 데이터 공유에 필수) ⭐
-    if (Platform.isIOS) {
-      await HomeWidget.setAppGroupId('group.baringWidget');
-    }
   } catch (e) {
     debugPrint('main init error: $e');
   }
