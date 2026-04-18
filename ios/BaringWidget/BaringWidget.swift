@@ -120,80 +120,96 @@ struct Provider: TimelineProvider {
         let targetDateStr = sharedDefaults?.string(forKey: "target_date") ?? "2024/12/31"
         let selectedPreset = sharedDefaults?.integer(forKey: "selected_preset") ?? 0
 
-        // target_date(yyyy/MM/dd)로 D-Day · 진행률 직접 계산
         let df = DateFormatter()
         df.dateFormat = "yyyy/MM/dd"
         df.locale = Locale(identifier: "en_US_POSIX")
 
         let cal = Calendar.current
-        let todayStart = cal.startOfDay(for: Date())
 
-        var dday = "D-0"
-        var percent = "0%"
-        var progress = 0.0
-
-        if let targetDate = df.date(from: targetDateStr) {
-            let targetStart = cal.startOfDay(for: targetDate)
-            let remaining = cal.dateComponents([.day], from: todayStart, to: targetStart).day ?? 0
-            if remaining > 0 {
-                dday = "D-\(remaining)"
-            } else if remaining == 0 {
-                dday = "D-DAY"
-            } else {
-                dday = "완료"
-            }
-
-            if let startDate = df.date(from: startDateStr) {
-                let startStart = cal.startOfDay(for: startDate)
-                let totalDays = cal.dateComponents([.day], from: startStart, to: targetStart).day ?? 0
-                if totalDays > 0 {
-                    let passedDays = cal.dateComponents([.day], from: startStart, to: todayStart).day ?? 0
-                    let ratio = Double(passedDays) / Double(totalDays)
-                    let clamped = min(max(ratio, 0.0), 1.0)
-                    progress = clamped
-                    percent = "\(Int(clamped * 100))%"
-                } else {
-                    progress = 1.0
-                    percent = "100%"
-                }
-            }
-        }
-
-        // 3일 미접속 시 실망 표정 계산
-        var widgetFace = sharedDefaults?.string(forKey: "widget_face") ?? "cheering2_face"
+        // 3일 미접속 시 실망 표정 계산용 lastOpenDate 파싱
+        var lastOpenDate: Date? = nil
         if let lastAppOpenStr = sharedDefaults?.string(forKey: "last_app_open") {
             let isoFormatter = ISO8601DateFormatter()
             isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            var lastDate: Date? = isoFormatter.date(from: lastAppOpenStr)
-            if lastDate == nil {
+            lastOpenDate = isoFormatter.date(from: lastAppOpenStr)
+            if lastOpenDate == nil {
                 isoFormatter.formatOptions = [.withInternetDateTime]
-                lastDate = isoFormatter.date(from: lastAppOpenStr)
+                lastOpenDate = isoFormatter.date(from: lastAppOpenStr)
             }
-            if lastDate == nil {
+            if lastOpenDate == nil {
                 let manualDf = DateFormatter()
                 manualDf.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
                 manualDf.locale = Locale(identifier: "en_US_POSIX")
-                lastDate = manualDf.date(from: lastAppOpenStr)
-            }
-            if let lastOpen = lastDate {
-                let days = cal.dateComponents([.day], from: lastOpen, to: Date()).day ?? 0
-                widgetFace = days >= 3 ? "disappointed_face" : "cheering2_face"
+                lastOpenDate = manualDf.date(from: lastAppOpenStr)
             }
         }
 
-        let entry = SimpleEntry(date: Date(),
-                               title: title,
-                               dday: dday,
-                               percent: percent,
-                               progress: progress,
-                               startDate: startDateStr,
-                               targetDate: targetDateStr,
-                               selectedPreset: selectedPreset,
-                               widgetFace: widgetFace)
+        // 7일치 entry를 미리 생성하여 iOS 갱신 누락에 대비
+        let daysToGenerate = 7
+        var entries: [SimpleEntry] = []
 
-        // 다음 자정에 타임라인 갱신 → 앱 없이도 D-Day가 매일 업데이트됨
-        let nextMidnight = cal.nextDate(after: Date(), matching: DateComponents(hour: 0, minute: 0, second: 0), matchingPolicy: .nextTime)!
-        let timeline = Timeline(entries: [entry], policy: .after(nextMidnight))
+        for dayOffset in 0..<daysToGenerate {
+            let entryDate: Date
+            let dayStart: Date
+            if dayOffset == 0 {
+                entryDate = Date()
+                dayStart = cal.startOfDay(for: Date())
+            } else {
+                dayStart = cal.date(byAdding: .day, value: dayOffset, to: cal.startOfDay(for: Date()))!
+                entryDate = dayStart
+            }
+
+            var dday = "D-0"
+            var percent = "0%"
+            var progress = 0.0
+
+            if let targetDate = df.date(from: targetDateStr) {
+                let targetStart = cal.startOfDay(for: targetDate)
+                let remaining = cal.dateComponents([.day], from: dayStart, to: targetStart).day ?? 0
+                if remaining > 0 {
+                    dday = "D-\(remaining)"
+                } else if remaining == 0 {
+                    dday = "D-DAY"
+                } else {
+                    dday = "완료"
+                }
+
+                if let startDate = df.date(from: startDateStr) {
+                    let startStart = cal.startOfDay(for: startDate)
+                    let totalDays = cal.dateComponents([.day], from: startStart, to: targetStart).day ?? 0
+                    if totalDays > 0 {
+                        let passedDays = cal.dateComponents([.day], from: startStart, to: dayStart).day ?? 0
+                        let ratio = Double(passedDays) / Double(totalDays)
+                        let clamped = min(max(ratio, 0.0), 1.0)
+                        progress = clamped
+                        percent = "\(Int(clamped * 100))%"
+                    } else {
+                        progress = 1.0
+                        percent = "100%"
+                    }
+                }
+            }
+
+            var widgetFace = "cheering2_face"
+            if let lastOpen = lastOpenDate {
+                let daysSinceOpen = cal.dateComponents([.day], from: lastOpen, to: entryDate).day ?? 0
+                widgetFace = daysSinceOpen >= 3 ? "disappointed_face" : "cheering2_face"
+            }
+
+            entries.append(SimpleEntry(date: entryDate,
+                                       title: title,
+                                       dday: dday,
+                                       percent: percent,
+                                       progress: progress,
+                                       startDate: startDateStr,
+                                       targetDate: targetDateStr,
+                                       selectedPreset: selectedPreset,
+                                       widgetFace: widgetFace))
+        }
+
+        // 7일 후 자정에 새 타임라인 요청 → 다시 7일치 생성 반복
+        let refreshDate = cal.date(byAdding: .day, value: daysToGenerate, to: cal.startOfDay(for: Date()))!
+        let timeline = Timeline(entries: entries, policy: .after(refreshDate))
         completion(timeline)
     }
 }
