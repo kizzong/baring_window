@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 class DDaySettingsPage extends StatefulWidget {
-  const DDaySettingsPage({super.key});
+  final int? editingIndex; // null = 새 목표 추가
+  const DDaySettingsPage({super.key, this.editingIndex});
 
   @override
   State<DDaySettingsPage> createState() => _DDaySettingsPageState();
@@ -41,18 +42,38 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
 
   // 저장된 데이터 불러오기 함수
   void _loadData() {
-    final eventData = baringBox.get("eventCard");
+    final idx = widget.editingIndex;
+    if (idx == null) return; // 새 목표: 기본값 유지
 
-    if (eventData != null) {
-      setState(() {
-        _titleController.text = eventData["title"] ?? "";
-        title = eventData["title"] ?? "";
-        startDate = DateTime.parse(eventData["startDate"]);
-        targetDate = DateTime.parse(eventData["targetDate"]);
-        final preset = eventData["selectedPreset"] ?? 0;
-        selectedPreset = (preset >= 0 && preset < presets.length) ? preset : 0;
-      });
-    }
+    final rawCards = baringBox.get("eventCards");
+    if (rawCards == null) return;
+    final cards = (rawCards as List).map((e) => Map<String, dynamic>.from(e)).toList();
+    if (idx >= cards.length) return;
+
+    final eventData = cards[idx];
+    setState(() {
+      _titleController.text = eventData["title"] ?? "";
+      title = eventData["title"] ?? "";
+      startDate = DateTime.parse(eventData["startDate"]);
+      targetDate = DateTime.parse(eventData["targetDate"]);
+      final preset = eventData["selectedPreset"] ?? 0;
+      selectedPreset = (preset >= 0 && preset < presets.length) ? preset : 0;
+    });
+  }
+
+  void _deleteCard() async {
+    final rawCards = baringBox.get("eventCards");
+    if (rawCards == null) return;
+    final cards = (rawCards as List).map((e) => Map<String, dynamic>.from(e)).toList();
+    final idx = widget.editingIndex!;
+    if (idx >= cards.length) return;
+    cards.removeAt(idx);
+    await baringBox.put("eventCards", cards);
+    try {
+      await WidgetService.updateWidget();
+    } catch (_) {}
+    if (!context.mounted) return;
+    Navigator.pop(context);
   }
 
   @override
@@ -163,14 +184,24 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
         actions: [
           TextButton(
             onPressed: () async {
-              baringBox.put("eventCard", {
+              final newCard = {
                 "title": _titleController.text,
                 "startDate": startDate.toIso8601String(),
                 "targetDate": targetDate.toIso8601String(),
                 "selectedPreset": selectedPreset,
-              });
+              };
+              final rawCards = baringBox.get("eventCards");
+              final cards = rawCards != null
+                  ? (rawCards as List).map((e) => Map<String, dynamic>.from(e)).toList()
+                  : <Map<String, dynamic>>[];
+              final idx = widget.editingIndex;
+              if (idx != null && idx < cards.length) {
+                cards[idx] = newCard;
+              } else {
+                cards.add(newCard);
+              }
+              await baringBox.put("eventCards", cards);
 
-              // 위젯 업데이트 ⭐
               try {
                 await WidgetService.updateWidget();
               } catch (_) {}
@@ -369,7 +400,9 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
                 const SizedBox(height: 22),
 
                 // Delete button
-                _DangerButton(text: '다시 작성', onTap: _resetToDefault),
+                widget.editingIndex != null
+                    ? _DangerButton(text: '목표 삭제', onTap: _deleteCard)
+                    : _DangerButton(text: '다시 작성', onTap: _resetToDefault),
               ],
             ),
           ),

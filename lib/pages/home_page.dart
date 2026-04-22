@@ -41,6 +41,7 @@ class _HomePageState extends State<HomePage>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
+    _migrateEventCard();
     _refreshAnalysis();
     WidgetService.dataVersion.addListener(_onWidgetDataChanged);
   }
@@ -147,6 +148,78 @@ class _HomePageState extends State<HomePage>
 
   int _calculatePercent(DateTime startDate, DateTime targetDate) {
     return (_calculateProgress(startDate, targetDate) * 100).round();
+  }
+
+  // eventCard(단일) → eventCards(리스트) 마이그레이션
+  void _migrateEventCard() {
+    final oldCard = baringBox.get("eventCard");
+    if (oldCard != null && baringBox.get("eventCards") == null) {
+      baringBox.put("eventCards", [Map<String, dynamic>.from(oldCard)]);
+      baringBox.delete("eventCard");
+    }
+  }
+
+  void _reorderCards(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex--;
+    final rawCards = baringBox.get("eventCards");
+    if (rawCards == null) return;
+    final cards = (rawCards as List).map((e) => Map<String, dynamic>.from(e)).toList();
+    final item = cards.removeAt(oldIndex);
+    cards.insert(newIndex, item);
+    baringBox.put("eventCards", cards);
+    WidgetService.updateWidget();
+    setState(() {});
+  }
+
+  Future<void> _navigateToDDaySettings({int? editingIndex}) async {
+    await Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            DDaySettingsPage(editingIndex: editingIndex),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final slideTween = Tween<Offset>(
+            begin: const Offset(0, 0.15),
+            end: Offset.zero,
+          ).chain(CurveTween(curve: Curves.easeOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0)
+              .chain(CurveTween(curve: Curves.easeOut));
+          return SlideTransition(
+            position: animation.drive(slideTween),
+            child: FadeTransition(opacity: animation.drive(fadeTween), child: child),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 350),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+    setState(() {});
+  }
+
+  Widget _buildAddCardButton(c) {
+    return GestureDetector(
+      onTap: () => _navigateToDDaySettings(editingIndex: null),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: c.cardBg,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: c.borderColor),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_rounded, color: c.primary, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              '목표 추가',
+              style: TextStyle(color: c.primary, fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   static const _dayNames = ['월', '화', '수', '목', '금', '토', '일'];
@@ -1161,16 +1234,10 @@ class _HomePageState extends State<HomePage>
     final userName = baringBox.get("userName", defaultValue: "바링"); // 이름 불러오기 ⭐
     final profileImagePath = baringBox.get("profileImagePath"); // 추가 ⭐
 
-    final eventData = baringBox.get("eventCard");
-
-    final title = eventData?["title"] ?? "목표를 설정해주세요";
-    final startDate = eventData != null
-        ? DateTime.parse(eventData["startDate"])
-        : DateTime.now();
-    final targetDate = eventData != null
-        ? DateTime.parse(eventData["targetDate"])
-        : DateTime.now().add(Duration(days: 100)); // 100일 후를 기본값으로
-    final selectedPreset = eventData?["selectedPreset"] ?? 0;
+    final rawCards = baringBox.get("eventCards");
+    final eventCards = rawCards != null
+        ? (rawCards as List).map((e) => Map<String, dynamic>.from(e)).toList()
+        : <Map<String, dynamic>>[];
 
     return Scaffold(
       backgroundColor: c.scaffoldBg,
@@ -1246,48 +1313,33 @@ class _HomePageState extends State<HomePage>
                 ],
               ),
               const SizedBox(height: 14),
-              EventCard(
-                title: title,
-                startDate: startDate,
-                targetDate: targetDate,
-                days: _calculateDays(targetDate),
-                gradient:
-                    presets[selectedPreset.clamp(0, presets.length - 1)].colors,
-                progress: _calculateProgress(startDate, targetDate),
-                percent: _calculatePercent(startDate, targetDate),
-                onMoreTap: () async {
-                  // test_page로 이동하고 돌아올 때 화면 새로고침
-                  await Navigator.push(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          DDaySettingsPage(),
-                      transitionsBuilder:
-                          (context, animation, secondaryAnimation, child) {
-                        final slideTween = Tween<Offset>(
-                          begin: const Offset(0, 0.15),
-                          end: Offset.zero,
-                        ).chain(CurveTween(curve: Curves.easeOutCubic));
-                        final fadeTween = Tween<double>(
-                          begin: 0.0,
-                          end: 1.0,
-                        ).chain(CurveTween(curve: Curves.easeOut));
-                        return SlideTransition(
-                          position: animation.drive(slideTween),
-                          child: FadeTransition(
-                            opacity: animation.drive(fadeTween),
-                            child: child,
-                          ),
-                        );
-                      },
-                      transitionDuration: const Duration(milliseconds: 350),
-                      reverseTransitionDuration:
-                          const Duration(milliseconds: 300),
-                    ),
-                  );
-                  setState(() {}); // 돌아왔을 때 데이터 새로고침
-                },
-              ),
+              // D-Day 카드 리스트 (최대 3개, 드래그 순서 변경)
+              if (eventCards.isNotEmpty)
+                ReorderableListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onReorder: _reorderCards,
+                  proxyDecorator: (child, index, animation) => child,
+                  children: [
+                    for (int i = 0; i < eventCards.length; i++)
+                      Padding(
+                        key: ValueKey(i),
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: EventCard(
+                          title: eventCards[i]["title"] ?? "목표를 설정해주세요",
+                          startDate: DateTime.parse(eventCards[i]["startDate"]),
+                          targetDate: DateTime.parse(eventCards[i]["targetDate"]),
+                          days: _calculateDays(DateTime.parse(eventCards[i]["targetDate"])),
+                          gradient: presets[((eventCards[i]["selectedPreset"] ?? 0) as int).clamp(0, presets.length - 1)].colors,
+                          progress: _calculateProgress(DateTime.parse(eventCards[i]["startDate"]), DateTime.parse(eventCards[i]["targetDate"])),
+                          percent: _calculatePercent(DateTime.parse(eventCards[i]["startDate"]), DateTime.parse(eventCards[i]["targetDate"])),
+                          onMoreTap: () => _navigateToDDaySettings(editingIndex: i),
+                        ),
+                      ),
+                  ],
+                ),
+              if (eventCards.length < 3)
+                _buildAddCardButton(c),
               const SizedBox(height: 24),
 
               // 날짜 헤더

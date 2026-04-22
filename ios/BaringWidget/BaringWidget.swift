@@ -96,7 +96,8 @@ struct Provider: TimelineProvider {
                    startDate: "2024/01/01",
                    targetDate: "2024/12/31",
                    selectedPreset: 0,
-                   widgetFace: "cheering2_face")
+                   widgetFace: "cheering2_face",
+                   goals: [])
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
@@ -108,7 +109,8 @@ struct Provider: TimelineProvider {
                                startDate: "2024/01/01",
                                targetDate: "2024/12/31",
                                selectedPreset: 0,
-                               widgetFace: "cheering2_face")
+                               widgetFace: "cheering2_face",
+                               goals: [])
         completion(entry)
     }
 
@@ -144,19 +146,42 @@ struct Provider: TimelineProvider {
             }
         }
 
+        // 전체 목표 파싱 (큰 위젯용)
+        struct RawGoal {
+            let title: String
+            let startDateStr: String
+            let targetDateStr: String
+            let preset: Int
+        }
+        var rawGoals: [RawGoal] = []
+        if let allGoalsStr = sharedDefaults?.string(forKey: "all_goals_json"),
+           let data = allGoalsStr.data(using: .utf8),
+           let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            for g in arr {
+                rawGoals.append(RawGoal(
+                    title: g["title"] as? String ?? "목표 설정",
+                    startDateStr: g["start_date"] as? String ?? "2024/01/01",
+                    targetDateStr: g["target_date"] as? String ?? "2024/12/31",
+                    preset: g["preset"] as? Int ?? 0
+                ))
+            }
+        }
+
         // 7일치 entry를 미리 생성하여 iOS 갱신 누락에 대비
         let daysToGenerate = 7
         var entries: [SimpleEntry] = []
 
+        let todayMidnight = cal.startOfDay(for: Date())
         for dayOffset in 0..<daysToGenerate {
             let entryDate: Date
             let dayStart: Date
             if dayOffset == 0 {
                 entryDate = Date()
-                dayStart = cal.startOfDay(for: Date())
+                dayStart = todayMidnight
             } else {
-                dayStart = cal.date(byAdding: .day, value: dayOffset, to: cal.startOfDay(for: Date()))!
-                entryDate = dayStart
+                guard let midnight = cal.date(byAdding: .day, value: dayOffset, to: todayMidnight) else { continue }
+                dayStart = midnight
+                entryDate = midnight
             }
 
             var dday = "D-0"
@@ -196,6 +221,31 @@ struct Provider: TimelineProvider {
                 widgetFace = daysSinceOpen >= 3 ? "disappointed_face" : "cheering2_face"
             }
 
+            // 각 날짜에 대한 전체 목표 계산
+            var goals: [GoalInfo] = []
+            for raw in rawGoals {
+                var gDday = "D-0", gPercent = "0%", gProgress = 0.0
+                if let gTarget = df.date(from: raw.targetDateStr) {
+                    let gTargetStart = cal.startOfDay(for: gTarget)
+                    let rem = cal.dateComponents([.day], from: dayStart, to: gTargetStart).day ?? 0
+                    if rem > 0 { gDday = "D-\(rem)" }
+                    else if rem == 0 { gDday = "D-DAY" }
+                    else { gDday = "완료" }
+                    if let gStart = df.date(from: raw.startDateStr) {
+                        let gStartDay = cal.startOfDay(for: gStart)
+                        let total = cal.dateComponents([.day], from: gStartDay, to: gTargetStart).day ?? 0
+                        if total > 0 {
+                            let passed = cal.dateComponents([.day], from: gStartDay, to: dayStart).day ?? 0
+                            gProgress = min(max(Double(passed) / Double(total), 0.0), 1.0)
+                            gPercent = "\(Int(gProgress * 100))%"
+                        } else {
+                            gProgress = 1.0; gPercent = "100%"
+                        }
+                    }
+                }
+                goals.append(GoalInfo(title: raw.title, dday: gDday, percent: gPercent, progress: gProgress, preset: raw.preset))
+            }
+
             entries.append(SimpleEntry(date: entryDate,
                                        title: title,
                                        dday: dday,
@@ -204,14 +254,24 @@ struct Provider: TimelineProvider {
                                        startDate: startDateStr,
                                        targetDate: targetDateStr,
                                        selectedPreset: selectedPreset,
-                                       widgetFace: widgetFace))
+                                       widgetFace: widgetFace,
+                                       goals: goals))
         }
 
         // 7일 후 자정에 새 타임라인 요청 → 다시 7일치 생성 반복
-        let refreshDate = cal.date(byAdding: .day, value: daysToGenerate, to: cal.startOfDay(for: Date()))!
+        let refreshDate = cal.date(byAdding: .day, value: daysToGenerate, to: todayMidnight)
+            ?? Date().addingTimeInterval(Double(daysToGenerate) * 86400)
         let timeline = Timeline(entries: entries, policy: .after(refreshDate))
         completion(timeline)
     }
+}
+
+struct GoalInfo {
+    let title: String
+    let dday: String
+    let percent: String
+    let progress: Double
+    let preset: Int
 }
 
 struct SimpleEntry: TimelineEntry {
@@ -224,6 +284,7 @@ struct SimpleEntry: TimelineEntry {
     let targetDate: String
     let selectedPreset: Int
     let widgetFace: String
+    let goals: [GoalInfo]   // 전체 목표 (큰 위젯용)
 }
 
 // 색상 프리셋 정의 (위젯 본체 + containerBackground 양쪽에서 사용)
@@ -246,25 +307,41 @@ func gradientColors(for preset: Int) -> [Color] {
 struct BaringWidgetEntryView : View {
     var entry: Provider.Entry
 
+    var dateText: String {
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "ko_KR")
+        df.dateFormat = "M월 d일 (E)"
+        return df.string(from: entry.date)
+    }
+
     var body: some View {
+        if entry.goals.count >= 2 {
+            multiGoalView
+        } else {
+            singleGoalView
+        }
+    }
+
+    // 목표 1개: 기존 상세 레이아웃
+    var singleGoalView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 상단: 제목 + D-Day (baseline 정렬)
+            Text(dateText)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white)
+            Spacer().frame(height: 4)
             HStack(alignment: .lastTextBaseline) {
                 Text(entry.title)
                     .font(.system(size: 24, weight: .black))
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.4)
-
                 Spacer(minLength: 8)
-
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(entry.dday)
                         .font(.system(size: 40, weight: .black))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-
                     Image(entry.widgetFace)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -272,55 +349,75 @@ struct BaringWidgetEntryView : View {
                         .opacity(0.8)
                 }
             }
-
             Spacer(minLength: 0)
-
-            // 하단: 퍼센트 + 프로그레스 바 + 날짜
             VStack(spacing: 0) {
-                // 퍼센트 (오른쪽 정렬)
-                HStack {
-                    Spacer()
-                    Text(entry.percent)
-                        .font(.system(size: 13, weight: .black))
-                        .foregroundColor(.white)
-                }
-
+                HStack { Spacer(); Text(entry.percent).font(.system(size: 13, weight: .black)).foregroundColor(.white) }
                 Spacer().frame(height: 4)
-
-                // 프로그레스 바
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 999)
-                        .fill(Color.white.opacity(0.25))
-                        .frame(height: 8)
-
+                    RoundedRectangle(cornerRadius: 999).fill(Color.white.opacity(0.25)).frame(height: 8)
                     GeometryReader { geo in
-                        RoundedRectangle(cornerRadius: 999)
-                            .fill(Color.white)
+                        RoundedRectangle(cornerRadius: 999).fill(Color.white)
                             .frame(width: geo.size.width * CGFloat(entry.progress), height: 8)
-                    }
-                    .frame(height: 8)
-                }
-                .frame(height: 8)
-
+                    }.frame(height: 8)
+                }.frame(height: 8)
                 Spacer().frame(height: 8)
-
-                // 날짜
                 HStack {
-                    Text(entry.startDate)
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(.white)
-
+                    Text(entry.startDate).font(.system(size: 11)).foregroundColor(.white)
                     Spacer()
-
-                    Text(entry.targetDate)
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(.white)
+                    Text(entry.targetDate).font(.system(size: 11)).foregroundColor(.white)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 14)
+        .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 14)
+        .widgetURL(URL(string: "baringapp://open"))
+    }
+
+    // 목표 2~3개: 컴팩트 리스트 레이아웃
+    var multiGoalView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(dateText)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white)
+            Spacer().frame(height: 8)
+            ForEach(Array(entry.goals.enumerated()), id: \.offset) { idx, goal in
+                if idx > 0 {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(height: 1)
+                        .padding(.vertical, 8)
+                }
+                HStack(alignment: .center, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(goal.title)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 999)
+                                .fill(Color.white.opacity(0.25))
+                                .frame(height: 5)
+                            GeometryReader { geo in
+                                RoundedRectangle(cornerRadius: 999)
+                                    .fill(Color.white)
+                                    .frame(width: geo.size.width * CGFloat(goal.progress), height: 5)
+                            }.frame(height: 5)
+                        }
+                    }
+                    Spacer(minLength: 6)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(goal.dday)
+                            .font(.system(size: 20, weight: .black))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Text(goal.percent)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 14)
         .widgetURL(URL(string: "baringapp://open"))
     }
 }
@@ -386,24 +483,30 @@ struct BaringWidget_Previews: PreviewProvider {
                 startDate: "2024/01/01",
                 targetDate: "2024/12/31",
                 selectedPreset: 0,
-                widgetFace: "cheering2_face"
+                widgetFace: "cheering2_face",
+                goals: []
             ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
-            .previewDisplayName("기본 하늘")
+            .previewDisplayName("기본 하늘 (단일)")
 
             BaringWidgetEntryView(entry: SimpleEntry(
                 date: Date(),
-                title: "전기기사 자격증 취득",
-                dday: "D-5",
-                percent: "95%",
-                progress: 0.95,
+                title: "전기기사",
+                dday: "D-30",
+                percent: "70%",
+                progress: 0.7,
                 startDate: "2024/01/01",
                 targetDate: "2024/12/31",
-                selectedPreset: 2,
-                widgetFace: "cheering2_face"
+                selectedPreset: 0,
+                widgetFace: "cheering2_face",
+                goals: [
+                    GoalInfo(title: "전기기사", dday: "D-30", percent: "70%", progress: 0.7, preset: 0),
+                    GoalInfo(title: "토익 900", dday: "D-5", percent: "95%", progress: 0.95, preset: 2),
+                    GoalInfo(title: "헬스 루틴", dday: "D-100", percent: "20%", progress: 0.2, preset: 7),
+                ]
             ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
-            .previewDisplayName("빨강")
+            .previewDisplayName("다중 목표")
         }
     }
 }
@@ -521,7 +624,8 @@ struct BaringSmallWidget_Previews: PreviewProvider {
                 startDate: "2024/01/01",
                 targetDate: "2024/12/31",
                 selectedPreset: 0,
-                widgetFace: "cheering2_face"
+                widgetFace: "cheering2_face",
+                goals: []
             ))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
             .previewDisplayName("2x2 파랑")
@@ -535,7 +639,8 @@ struct BaringSmallWidget_Previews: PreviewProvider {
                 startDate: "2024/01/01",
                 targetDate: "2024/12/31",
                 selectedPreset: 4,
-                widgetFace: "cheering2_face"
+                widgetFace: "cheering2_face",
+                goals: []
             ))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
             .previewDisplayName("2x2 보라")

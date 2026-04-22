@@ -59,7 +59,14 @@ class WidgetService {
     try {
       await _ensureAppGroup();
       final baringBox = Hive.box("baring");
-      final eventData = baringBox.get("eventCard");
+      final rawCards = baringBox.get("eventCards");
+      final eventData = rawCards != null && (rawCards as List).isNotEmpty
+          ? Map<String, dynamic>.from(rawCards.first)
+          : null;
+
+      String formatDate(DateTime date) {
+        return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+      }
 
       if (eventData != null) {
         final title = eventData["title"] ?? "목표 설정";
@@ -75,25 +82,31 @@ class WidgetService {
             ? "D-DAY"
             : "완료";
 
-        String formatDate(DateTime date) {
-          return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
-        }
-
-        // 위젯에 모든 데이터 전달
+        // 위젯에 모든 데이터 전달 (첫 번째 목표 - 작은 위젯용)
         await HomeWidget.saveWidgetData<String>('title_text', title);
         await HomeWidget.saveWidgetData<String>('dday_text', dDayText);
         await HomeWidget.saveWidgetData<String>('percent_text', '$percent%');
         await HomeWidget.saveWidgetData<int>('progress', percent);
-        await HomeWidget.saveWidgetData<String>(
-          'start_date',
-          formatDate(startDate),
-        );
-        await HomeWidget.saveWidgetData<String>(
-          'target_date',
-          formatDate(targetDate),
-        );
+        await HomeWidget.saveWidgetData<String>('start_date', formatDate(startDate));
+        await HomeWidget.saveWidgetData<String>('target_date', formatDate(targetDate));
         await HomeWidget.saveWidgetData<int>('selected_preset', selectedPreset);
       }
+
+      // 모든 목표 저장 (큰 위젯 - 전체 목표 표시용)
+      final cards = rawCards != null
+          ? (rawCards as List).map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
+      final allGoalsList = cards.map((card) {
+        final s = DateTime.parse(card["startDate"]);
+        final t = DateTime.parse(card["targetDate"]);
+        return {
+          'title': card["title"] ?? "목표 설정",
+          'start_date': formatDate(s),
+          'target_date': formatDate(t),
+          'preset': card["selectedPreset"] ?? 0,
+        };
+      }).toList();
+      await HomeWidget.saveWidgetData<String>('all_goals_json', jsonEncode(allGoalsList));
 
       // 표정 업데이트
       await updateWidgetFace();
@@ -104,7 +117,6 @@ class WidgetService {
         await HomeWidget.updateWidget(androidName: 'SmallHomeWidgetProvider');
       } else if (Platform.isIOS) {
         await HomeWidget.updateWidget(iOSName: 'BaringWidget');
-        await Future.delayed(const Duration(milliseconds: 200));
         await HomeWidget.updateWidget(iOSName: 'BaringSmallWidget');
       }
     } catch (e) {
