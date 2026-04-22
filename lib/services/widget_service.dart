@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
@@ -108,6 +109,9 @@ class WidgetService {
       }).toList();
       await HomeWidget.saveWidgetData<String>('all_goals_json', jsonEncode(allGoalsList));
 
+      // 위치 저장 (날씨 위젯용)
+      await _saveLocationForWidget();
+
       // 표정 업데이트
       await updateWidgetFace();
 
@@ -121,6 +125,30 @@ class WidgetService {
       }
     } catch (e) {
       print('위젯 업데이트 오류: $e');
+    }
+  }
+
+  static Future<void> _saveLocationForWidget() async {
+    try {
+      await _ensureAppGroup();
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        return; // 위젯에서 서울 기본값 사용
+      }
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+      await HomeWidget.saveWidgetData<double>('widget_lat', position.latitude);
+      await HomeWidget.saveWidgetData<double>('widget_lon', position.longitude);
+    } catch (e) {
+      print('위치 저장 오류: $e');
     }
   }
 

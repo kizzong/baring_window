@@ -97,7 +97,9 @@ struct Provider: TimelineProvider {
                    targetDate: "2024/12/31",
                    selectedPreset: 0,
                    widgetFace: "cheering2_face",
-                   goals: [])
+                   goals: [],
+                   weatherEmoji: "⛅",
+                   tempText: "--°")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
@@ -110,7 +112,9 @@ struct Provider: TimelineProvider {
                                targetDate: "2024/12/31",
                                selectedPreset: 0,
                                widgetFace: "cheering2_face",
-                               goals: [])
+                               goals: [],
+                               weatherEmoji: "⛅",
+                               tempText: "--°")
         completion(entry)
     }
 
@@ -127,115 +131,71 @@ struct Provider: TimelineProvider {
         df.locale = Locale(identifier: "en_US_POSIX")
 
         let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
 
-        // 3일 미접속 시 실망 표정 계산용 lastOpenDate 파싱
-        var lastOpenDate: Date? = nil
+        // D-Day 및 진행률 계산
+        var dday = "D-0"
+        var percent = "0%"
+        var progress = 0.0
+
+        if let targetDate = df.date(from: targetDateStr) {
+            let targetStart = cal.startOfDay(for: targetDate)
+            let remaining = cal.dateComponents([.day], from: today, to: targetStart).day ?? 0
+            if remaining > 0 { dday = "D-\(remaining)" }
+            else if remaining == 0 { dday = "D-DAY" }
+            else { dday = "완료" }
+
+            if let startDate = df.date(from: startDateStr) {
+                let startStart = cal.startOfDay(for: startDate)
+                let totalDays = cal.dateComponents([.day], from: startStart, to: targetStart).day ?? 0
+                if totalDays > 0 {
+                    let passedDays = cal.dateComponents([.day], from: startStart, to: today).day ?? 0
+                    progress = min(max(Double(passedDays) / Double(totalDays), 0.0), 1.0)
+                    percent = "\(Int(progress * 100))%"
+                } else {
+                    progress = 1.0; percent = "100%"
+                }
+            }
+        }
+
+        // 위젯 표정 계산
+        var widgetFace = "cheering2_face"
         if let lastAppOpenStr = sharedDefaults?.string(forKey: "last_app_open") {
             let isoFormatter = ISO8601DateFormatter()
             isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            lastOpenDate = isoFormatter.date(from: lastAppOpenStr)
+            var lastOpenDate = isoFormatter.date(from: lastAppOpenStr)
             if lastOpenDate == nil {
                 isoFormatter.formatOptions = [.withInternetDateTime]
                 lastOpenDate = isoFormatter.date(from: lastAppOpenStr)
             }
-            if lastOpenDate == nil {
-                let manualDf = DateFormatter()
-                manualDf.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
-                manualDf.locale = Locale(identifier: "en_US_POSIX")
-                lastOpenDate = manualDf.date(from: lastAppOpenStr)
+            if let lastOpen = lastOpenDate {
+                let daysSince = cal.dateComponents([.day], from: lastOpen, to: Date()).day ?? 0
+                widgetFace = daysSince >= 3 ? "disappointed_face" : "cheering2_face"
             }
         }
 
-        // 전체 목표 파싱 (큰 위젯용)
-        struct RawGoal {
-            let title: String
-            let startDateStr: String
-            let targetDateStr: String
-            let preset: Int
-        }
-        var rawGoals: [RawGoal] = []
+        // 전체 목표 파싱 (다중 목표 뷰용)
+        var goals: [GoalInfo] = []
         if let allGoalsStr = sharedDefaults?.string(forKey: "all_goals_json"),
            let data = allGoalsStr.data(using: .utf8),
            let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
             for g in arr {
-                rawGoals.append(RawGoal(
-                    title: g["title"] as? String ?? "목표 설정",
-                    startDateStr: g["start_date"] as? String ?? "2024/01/01",
-                    targetDateStr: g["target_date"] as? String ?? "2024/12/31",
-                    preset: g["preset"] as? Int ?? 0
-                ))
-            }
-        }
-
-        // 7일치 entry를 미리 생성하여 iOS 갱신 누락에 대비
-        let daysToGenerate = 7
-        var entries: [SimpleEntry] = []
-
-        let todayMidnight = cal.startOfDay(for: Date())
-        for dayOffset in 0..<daysToGenerate {
-            let entryDate: Date
-            let dayStart: Date
-            if dayOffset == 0 {
-                entryDate = Date()
-                dayStart = todayMidnight
-            } else {
-                guard let midnight = cal.date(byAdding: .day, value: dayOffset, to: todayMidnight) else { continue }
-                dayStart = midnight
-                entryDate = midnight
-            }
-
-            var dday = "D-0"
-            var percent = "0%"
-            var progress = 0.0
-
-            if let targetDate = df.date(from: targetDateStr) {
-                let targetStart = cal.startOfDay(for: targetDate)
-                let remaining = cal.dateComponents([.day], from: dayStart, to: targetStart).day ?? 0
-                if remaining > 0 {
-                    dday = "D-\(remaining)"
-                } else if remaining == 0 {
-                    dday = "D-DAY"
-                } else {
-                    dday = "완료"
-                }
-
-                if let startDate = df.date(from: startDateStr) {
-                    let startStart = cal.startOfDay(for: startDate)
-                    let totalDays = cal.dateComponents([.day], from: startStart, to: targetStart).day ?? 0
-                    if totalDays > 0 {
-                        let passedDays = cal.dateComponents([.day], from: startStart, to: dayStart).day ?? 0
-                        let ratio = Double(passedDays) / Double(totalDays)
-                        let clamped = min(max(ratio, 0.0), 1.0)
-                        progress = clamped
-                        percent = "\(Int(clamped * 100))%"
-                    } else {
-                        progress = 1.0
-                        percent = "100%"
-                    }
-                }
-            }
-
-            var widgetFace = "cheering2_face"
-            if let lastOpen = lastOpenDate {
-                let daysSinceOpen = cal.dateComponents([.day], from: lastOpen, to: entryDate).day ?? 0
-                widgetFace = daysSinceOpen >= 3 ? "disappointed_face" : "cheering2_face"
-            }
-
-            // 각 날짜에 대한 전체 목표 계산
-            var goals: [GoalInfo] = []
-            for raw in rawGoals {
+                let gTitle = g["title"] as? String ?? "목표 설정"
+                let gStartStr = g["start_date"] as? String ?? "2024/01/01"
+                let gTargetStr = g["target_date"] as? String ?? "2024/12/31"
+                let gPreset = g["preset"] as? Int ?? 0
                 var gDday = "D-0", gPercent = "0%", gProgress = 0.0
-                if let gTarget = df.date(from: raw.targetDateStr) {
+                if let gTarget = df.date(from: gTargetStr) {
                     let gTargetStart = cal.startOfDay(for: gTarget)
-                    let rem = cal.dateComponents([.day], from: dayStart, to: gTargetStart).day ?? 0
+                    let rem = cal.dateComponents([.day], from: today, to: gTargetStart).day ?? 0
                     if rem > 0 { gDday = "D-\(rem)" }
                     else if rem == 0 { gDday = "D-DAY" }
                     else { gDday = "완료" }
-                    if let gStart = df.date(from: raw.startDateStr) {
+                    if let gStart = df.date(from: gStartStr) {
                         let gStartDay = cal.startOfDay(for: gStart)
                         let total = cal.dateComponents([.day], from: gStartDay, to: gTargetStart).day ?? 0
                         if total > 0 {
-                            let passed = cal.dateComponents([.day], from: gStartDay, to: dayStart).day ?? 0
+                            let passed = cal.dateComponents([.day], from: gStartDay, to: today).day ?? 0
                             gProgress = min(max(Double(passed) / Double(total), 0.0), 1.0)
                             gPercent = "\(Int(gProgress * 100))%"
                         } else {
@@ -243,26 +203,64 @@ struct Provider: TimelineProvider {
                         }
                     }
                 }
-                goals.append(GoalInfo(title: raw.title, dday: gDday, percent: gPercent, progress: gProgress, preset: raw.preset))
+                goals.append(GoalInfo(title: gTitle, dday: gDday, percent: gPercent, progress: gProgress, preset: gPreset))
             }
-
-            entries.append(SimpleEntry(date: entryDate,
-                                       title: title,
-                                       dday: dday,
-                                       percent: percent,
-                                       progress: progress,
-                                       startDate: startDateStr,
-                                       targetDate: targetDateStr,
-                                       selectedPreset: selectedPreset,
-                                       widgetFace: widgetFace,
-                                       goals: goals))
         }
 
-        // 7일 후 자정에 새 타임라인 요청 → 다시 7일치 생성 반복
-        let refreshDate = cal.date(byAdding: .day, value: daysToGenerate, to: todayMidnight)
-            ?? Date().addingTimeInterval(Double(daysToGenerate) * 86400)
-        let timeline = Timeline(entries: entries, policy: .after(refreshDate))
-        completion(timeline)
+        // 위치 (Flutter 앱이 저장한 좌표, 없으면 서울 기본값)
+        let lat = sharedDefaults?.object(forKey: "widget_lat") as? Double ?? 37.5665
+        let lon = sharedDefaults?.object(forKey: "widget_lon") as? Double ?? 126.9780
+
+        // 날씨 API 호출 후 타임라인 완성 (1시간마다 갱신)
+        fetchWeather(lat: lat, lon: lon) { emoji, temp in
+            let entry = SimpleEntry(
+                date: Date(),
+                title: title,
+                dday: dday,
+                percent: percent,
+                progress: progress,
+                startDate: startDateStr,
+                targetDate: targetDateStr,
+                selectedPreset: selectedPreset,
+                widgetFace: widgetFace,
+                goals: goals,
+                weatherEmoji: emoji,
+                tempText: temp
+            )
+            let nextRefresh = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
+            let timeline = Timeline(entries: [entry], policy: .after(nextRefresh))
+            completion(timeline)
+        }
+    }
+}
+
+func fetchWeather(lat: Double, lon: Double, completion: @escaping (String, String) -> Void) {
+    let apiKey = "f81d936aa84b2051e2ec5b60090c8b4f"
+    let urlStr = "https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"
+    guard let url = URL(string: urlStr) else { completion("", ""); return }
+    URLSession.shared.dataTask(with: url) { data, _, _ in
+        guard let data = data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let weatherArr = json["weather"] as? [[String: Any]],
+              let mainDict = json["main"] as? [String: Any],
+              let icon = weatherArr.first?["icon"] as? String,
+              let temp = mainDict["temp"] as? Double else {
+            completion("", ""); return
+        }
+        completion(iconToEmoji(icon), "\(Int(temp.rounded()))°")
+    }.resume()
+}
+
+func iconToEmoji(_ icon: String) -> String {
+    switch icon.prefix(2) {
+    case "01": return "☀️"
+    case "02": return "⛅"
+    case "03", "04": return "☁️"
+    case "09", "10": return "🌧️"
+    case "11": return "⛈️"
+    case "13": return "🌨️"
+    case "50": return "🌫️"
+    default: return "🌤️"
     }
 }
 
@@ -285,6 +283,8 @@ struct SimpleEntry: TimelineEntry {
     let selectedPreset: Int
     let widgetFace: String
     let goals: [GoalInfo]   // 전체 목표 (큰 위젯용)
+    let weatherEmoji: String
+    let tempText: String
 }
 
 // 색상 프리셋 정의 (위젯 본체 + containerBackground 양쪽에서 사용)
@@ -325,9 +325,17 @@ struct BaringWidgetEntryView : View {
     // 목표 1개: 기존 상세 레이아웃
     var singleGoalView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(dateText)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+            HStack(alignment: .center) {
+                Text(dateText)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                Spacer()
+                if !entry.weatherEmoji.isEmpty {
+                    Text("\(entry.weatherEmoji) \(entry.tempText)")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
             Spacer().frame(height: 4)
             HStack(alignment: .lastTextBaseline) {
                 Text(entry.title)
@@ -338,7 +346,7 @@ struct BaringWidgetEntryView : View {
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(entry.dday)
-                        .font(.system(size: 40, weight: .black))
+                        .font(.system(size: 48, weight: .black))
                         .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -375,9 +383,17 @@ struct BaringWidgetEntryView : View {
     // 목표 2~3개: 컴팩트 리스트 레이아웃
     var multiGoalView: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(dateText)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+            HStack(alignment: .center) {
+                Text(dateText)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                Spacer()
+                if !entry.weatherEmoji.isEmpty {
+                    Text("\(entry.weatherEmoji) \(entry.tempText)")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
             Spacer().frame(height: 8)
             ForEach(Array(entry.goals.enumerated()), id: \.offset) { idx, goal in
                 if idx > 0 {
@@ -484,7 +500,9 @@ struct BaringWidget_Previews: PreviewProvider {
                 targetDate: "2024/12/31",
                 selectedPreset: 0,
                 widgetFace: "cheering2_face",
-                goals: []
+                goals: [],
+                weatherEmoji: "⛅",
+                tempText: "18°"
             ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
             .previewDisplayName("기본 하늘 (단일)")
@@ -503,7 +521,9 @@ struct BaringWidget_Previews: PreviewProvider {
                     GoalInfo(title: "전기기사", dday: "D-30", percent: "70%", progress: 0.7, preset: 0),
                     GoalInfo(title: "토익 900", dday: "D-5", percent: "95%", progress: 0.95, preset: 2),
                     GoalInfo(title: "헬스 루틴", dday: "D-100", percent: "20%", progress: 0.2, preset: 7),
-                ]
+                ],
+                weatherEmoji: "⛅",
+                tempText: "18°"
             ))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
             .previewDisplayName("다중 목표")
@@ -625,7 +645,9 @@ struct BaringSmallWidget_Previews: PreviewProvider {
                 targetDate: "2024/12/31",
                 selectedPreset: 0,
                 widgetFace: "cheering2_face",
-                goals: []
+                goals: [],
+                weatherEmoji: "⛅",
+                tempText: "18°"
             ))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
             .previewDisplayName("2x2 파랑")
@@ -640,7 +662,9 @@ struct BaringSmallWidget_Previews: PreviewProvider {
                 targetDate: "2024/12/31",
                 selectedPreset: 4,
                 widgetFace: "cheering2_face",
-                goals: []
+                goals: [],
+                weatherEmoji: "⛅",
+                tempText: "18°"
             ))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
             .previewDisplayName("2x2 보라")
