@@ -69,11 +69,16 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
     if (idx >= cards.length) return;
     cards.removeAt(idx);
     await baringBox.put("eventCards", cards);
+
+    // 먼저 화면 닫기
+    if (mounted) {
+      Navigator.pop(context);
+    }
+
+    // 백그라운드로 위젯 업데이트
     try {
       await WidgetService.updateWidget();
     } catch (_) {}
-    if (!context.mounted) return;
-    Navigator.pop(context);
   }
 
   @override
@@ -202,12 +207,15 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
               }
               await baringBox.put("eventCards", cards);
 
+              // 먼저 화면 닫기
+              if (mounted) {
+                Navigator.pop(context);
+              }
+
+              // 백그라운드로 위젯 업데이트
               try {
                 await WidgetService.updateWidget();
               } catch (_) {}
-
-              if (!context.mounted) return;
-              Navigator.pop(context);
             },
             child: Text(
               "완료",

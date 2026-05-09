@@ -100,17 +100,29 @@ class WidgetService {
       final allGoalsList = cards.map((card) {
         final s = DateTime.parse(card["startDate"]);
         final t = DateTime.parse(card["targetDate"]);
+        final daysRemaining = _calculateDays(t);
+        final percent = _calculatePercent(s, t);
+        final dDayText = daysRemaining > 0
+            ? "D-$daysRemaining"
+            : daysRemaining == 0
+            ? "D-DAY"
+            : "완료";
         return {
           'title': card["title"] ?? "목표 설정",
           'start_date': formatDate(s),
           'target_date': formatDate(t),
           'preset': card["selectedPreset"] ?? 0,
+          'dday_text': dDayText,
+          'percent': percent,
         };
       }).toList();
       await HomeWidget.saveWidgetData<String>('all_goals_json', jsonEncode(allGoalsList));
 
       // 위치 저장 (날씨 위젯용)
       await _saveLocationForWidget();
+
+      // 날짜와 날씨 데이터 저장
+      await _saveDateAndWeather();
 
       // 표정 업데이트
       await updateWidgetFace();
@@ -149,6 +161,38 @@ class WidgetService {
       await HomeWidget.saveWidgetData<double>('widget_lon', position.longitude);
     } catch (e) {
       print('위치 저장 오류: $e');
+    }
+  }
+
+  /// 날짜와 날씨 정보를 위젯에 저장
+  static Future<void> _saveDateAndWeather() async {
+    try {
+      await _ensureAppGroup();
+
+      // 날짜 텍스트 생성 (예: "5월 9일 (토)")
+      final now = DateTime.now();
+      final weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+      final weekday = weekdays[now.weekday - 1];
+      final dateText = '${now.month}월 ${now.day}일 ($weekday)';
+
+      await HomeWidget.saveWidgetData<String>('date_text', dateText);
+
+      // 날씨 정보는 추후 API 연동 (임시로 빈 문자열)
+      // TODO: 날씨 API 연동
+      final baringBox = Hive.box("baring");
+      final weatherInfo = baringBox.get("weather_info"); // 이미 저장된 날씨 정보가 있다면
+
+      if (weatherInfo != null && weatherInfo is Map) {
+        final temp = weatherInfo['temp'];
+        final icon = weatherInfo['icon'] ?? '☀️';
+        final weatherText = temp != null ? '$icon ${temp}°' : '';
+        await HomeWidget.saveWidgetData<String>('weather_text', weatherText);
+      } else {
+        // 기본값
+        await HomeWidget.saveWidgetData<String>('weather_text', '');
+      }
+    } catch (e) {
+      print('날짜/날씨 저장 오류: $e');
     }
   }
 

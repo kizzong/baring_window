@@ -1,6 +1,4 @@
 {
-  "model": "sonnet",
-
   "permissions": {
     "allow": [
       "Bash(flutter analyze:*)",
@@ -22,7 +20,11 @@
       "Bash(xcodebuild:*)",
       "Bash(xcrun simctl spawn:*)",
       "Bash(flutter run:*)",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "Bash(./gradlew clean:*)",
+      "Bash(adb devices:*)",
+      "Bash(git checkout:*)"
     ]
-  }
+  },
+  "model": "sonnet"
 }
