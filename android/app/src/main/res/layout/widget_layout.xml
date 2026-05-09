@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingBottom="6dp">
+        android:paddingBottom="0dp">
 
         <TextView
             android:id="@+id/date_text"
@@ -44,13 +44,17 @@
         android:layout_weight="1"
         android:visibility="gone">
 
+        <!-- 목표 (제목 + D-Day) - 중앙보다 약간 위 -->
         <LinearLayout
             android:id="@+id/title_dday_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_above="@+id/progress_container"
             android:layout_centerVertical="true"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginTop="-12dp"
+            android:layout_marginBottom="20dp">
 
             <TextView
                 android:id="@+id/title_text"
@@ -75,6 +79,7 @@
 
         </LinearLayout>
 
+        <!-- 프로그레스 바 + 날짜 - 하단 고정 -->
         <LinearLayout
             android:id="@+id/progress_container"
             android:layout_width="match_parent"
