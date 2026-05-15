@@ -101,7 +101,7 @@ class _OnboardingPage7State extends State<OnboardingPage7> {
                   style: TextStyle(
                     fontSize: 18,
                     height: 1.6,
-                    color: Colors.white.withOpacity(0.55),
+                    color: c.textSecondary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -122,7 +122,7 @@ class _OnboardingPage7State extends State<OnboardingPage7> {
                           size: 44,
                           color: star <= _rating
                               ? const Color(0xFFFFD54F)
-                              : Colors.white.withOpacity(0.3),
+                              : c.subtle,
                         ),
                       ),
                     );
@@ -139,7 +139,7 @@ class _OnboardingPage7State extends State<OnboardingPage7> {
                         : '아쉬운 점이 있으시군요. 의견을 보내주세요',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: c.textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
