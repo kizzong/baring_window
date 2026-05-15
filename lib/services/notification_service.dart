@@ -369,4 +369,95 @@ class NotificationService {
   static Future<void> cancelRoutineNotification(int id) async {
     await _plugin.cancel(id);
   }
+
+  // ── D-Day 마일스톤 알림 ──
+
+  /// D-Day 알림 ID 생성
+  /// ID 범위: 1000000-1999999
+  /// 공식: 1000000 + (cardIndex * 100) + milestoneIndex
+  static int _generateDDayNotificationId(int cardIndex, int milestoneIndex) {
+    return 1000000 + (cardIndex * 100) + milestoneIndex;
+  }
+
+  /// D-Day 마일스톤 알림 스케줄
+  static Future<void> scheduleDDayMilestoneNotifications({
+    required int cardIndex,
+    required String title,
+    required DateTime targetDate,
+    required int hour,
+    required int minute,
+  }) async {
+    final milestones = [100, 50, 30, 10, 3, 1, 0]; // 0 = D-Day
+
+    for (int i = 0; i < milestones.length; i++) {
+      final daysRemaining = milestones[i];
+      final notificationDate = targetDate.subtract(Duration(days: daysRemaining));
+      final scheduledTime = tz.TZDateTime(
+        tz.local,
+        notificationDate.year,
+        notificationDate.month,
+        notificationDate.day,
+        hour,
+        minute,
+      );
+
+      // 과거면 스킵
+      if (scheduledTime.isBefore(tz.TZDateTime.now(tz.local))) continue;
+
+      final id = _generateDDayNotificationId(cardIndex, i);
+      final body = daysRemaining == 0
+          ? '오늘은 $title 날입니다! 🎉'
+          : '$title까지 $daysRemaining일 남았습니다!';
+
+      await _plugin.zonedSchedule(
+        id,
+        '🎯 $title',
+        body,
+        scheduledTime,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'dday_milestone',
+            'D-day 알림',
+            channelDescription: 'D-day 이벤트 알림',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: null,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
+  }
+
+  /// D-Day 마일스톤 알림 취소
+  static Future<void> cancelDDayMilestoneNotifications(int cardIndex) async {
+    for (int i = 0; i < 7; i++) {
+      await _plugin.cancel(_generateDDayNotificationId(cardIndex, i));
+    }
+  }
+
+  /// D-Day 마일스톤 알림 재스케줄
+  static Future<void> rescheduleDDayMilestoneNotifications({
+    required int cardIndex,
+    required String title,
+    required DateTime targetDate,
+    required int hour,
+    required int minute,
+  }) async {
+    await cancelDDayMilestoneNotifications(cardIndex);
+    await scheduleDDayMilestoneNotifications(
+      cardIndex: cardIndex,
+      title: title,
+      targetDate: targetDate,
+      hour: hour,
+      minute: minute,
+    );
+  }
 }

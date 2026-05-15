@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:baring_windows/theme/app_colors.dart';
 
 class OnboardingPage1 extends StatefulWidget {
   const OnboardingPage1({super.key});
@@ -48,16 +49,11 @@ class _OnboardingPage1State extends State<OnboardingPage1>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF08101C), Color(0xFF050A12)],
-        ),
-      ),
+      color: c.scaffoldBg,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -80,13 +76,13 @@ class _OnboardingPage1State extends State<OnboardingPage1>
                 // Title fade-in
                 FadeTransition(
                   opacity: _titleFade,
-                  child: const Text(
+                  child: Text(
                     '반가워요!',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: c.textPrimary,
                       letterSpacing: -0.4,
                     ),
                   ),
@@ -103,7 +99,7 @@ class _OnboardingPage1State extends State<OnboardingPage1>
                     style: TextStyle(
                       fontSize: 18,
                       height: 1.6,
-                      color: Colors.white.withOpacity(0.55),
+                      color: c.subtle,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

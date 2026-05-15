@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:baring_windows/pages/dday_settings_page.dart' show EventCard;
+import 'package:baring_windows/theme/app_colors.dart';
 
 class OnboardingPage4 extends StatefulWidget {
   const OnboardingPage4({super.key, this.onGoalSaved});
@@ -39,12 +40,13 @@ class OnboardingPage4State extends State<OnboardingPage4> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
       builder: (context, child) {
+        final c = context.colors;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF3E7BFF),
-              surface: Color(0xFF0B1623),
-            ),
+          data: Theme.of(context).copyWith(
+            colorScheme: isDark
+                ? ColorScheme.dark(primary: c.primary, surface: c.scaffoldBg)
+                : ColorScheme.light(primary: c.primary, surface: c.scaffoldBg),
           ),
           child: child!,
         );
@@ -89,7 +91,7 @@ class OnboardingPage4State extends State<OnboardingPage4> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF3E7BFF);
+    final c = context.colors;
     final h = MediaQuery.of(context).size.height;
     final gradientColors = _presets[_selectedPreset].colors;
 
@@ -103,18 +105,12 @@ class OnboardingPage4State extends State<OnboardingPage4> {
     final days = dDiff < 0 ? 0 : dDiff;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050A12),
+      backgroundColor: c.scaffoldBg,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         behavior: HitTestBehavior.translucent,
         child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF08101C), Color(0xFF050A12)],
-            ),
-          ),
+          color: c.scaffoldBg,
           child: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -123,14 +119,14 @@ class OnboardingPage4State extends State<OnboardingPage4> {
                 children: [
                   SizedBox(height: h * 0.04),
 
-                  const Center(
+                  Center(
                     child: Text(
                       '첫 번째 목표를 만들어보세요',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: c.textPrimary,
                         letterSpacing: -0.4,
                       ),
                     ),
@@ -159,8 +155,8 @@ class OnboardingPage4State extends State<OnboardingPage4> {
                   TextField(
                     controller: _titleController,
                     maxLength: 20,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: c.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -168,14 +164,14 @@ class OnboardingPage4State extends State<OnboardingPage4> {
                     decoration: InputDecoration(
                       hintText: '예: 자격증 합격',
                       hintStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.3),
+                        color: c.subtle,
                         fontWeight: FontWeight.w600,
                       ),
                       counterStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.3),
+                        color: c.subtle,
                       ),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.07),
+                      fillColor: c.inputBg,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -183,13 +179,13 @@ class OnboardingPage4State extends State<OnboardingPage4> {
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.08),
+                          color: c.borderColor,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(
-                          color: primaryBlue,
+                        borderSide: BorderSide(
+                          color: c.primary,
                           width: 1.5,
                         ),
                       ),
@@ -249,11 +245,11 @@ class OnboardingPage4State extends State<OnboardingPage4> {
                                 end: Alignment.bottomRight,
                               ),
                               border: isSelected
-                                  ? Border.all(color: Colors.white, width: 2.5)
+                                  ? Border.all(color: c.primary, width: 2.5)
                                   : null,
                             ),
                             child: isSelected
-                                ? const Icon(Icons.check, color: Colors.white, size: 22)
+                                ? Icon(Icons.check, color: Colors.white, size: 22)
                                 : null,
                           ),
                         );
@@ -284,10 +280,11 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Text(
       text,
       style: TextStyle(
-        color: Colors.white.withOpacity(0.6),
+        color: c.subtle,
         fontSize: 14,
         fontWeight: FontWeight.w700,
       ),
@@ -307,14 +304,15 @@ class _DateButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.07),
+          color: c.inputBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: c.borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,7 +320,7 @@ class _DateButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
+                color: c.subtle,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -330,8 +328,8 @@ class _DateButton extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               date,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: c.textPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),

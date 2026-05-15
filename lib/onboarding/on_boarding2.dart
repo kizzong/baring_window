@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:baring_windows/theme/app_colors.dart';
 
 class OnboardingPage2 extends StatefulWidget {
   const OnboardingPage2({super.key});
@@ -46,16 +47,11 @@ class _OnboardingPage2State extends State<OnboardingPage2>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: const Color(0xFF050A12),
+      backgroundColor: c.scaffoldBg,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF08101C), Color(0xFF050A12)],
-          ),
-        ),
+        color: c.scaffoldBg,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -63,13 +59,13 @@ class _OnboardingPage2State extends State<OnboardingPage2>
               children: [
                 const Spacer(flex: 2),
 
-                const Text(
+                Text(
                   '바링이 도와줄게요',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    color: c.textPrimary,
                     letterSpacing: -0.4,
                   ),
                 ),
@@ -130,14 +126,15 @@ class _BenefitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.07),
+        color: c.cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.10),
+          color: c.borderColor,
           width: 1,
         ),
       ),
@@ -147,10 +144,10 @@ class _BenefitCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFF3E7BFF).withOpacity(0.18),
+              color: c.primary.withOpacity(0.18),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: const Color(0xFF3E7BFF), size: 26),
+            child: Icon(icon, color: c.primary, size: 26),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -159,8 +156,8 @@ class _BenefitCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: c.textPrimary,
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                   ),
@@ -169,7 +166,7 @@ class _BenefitCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.55),
+                    color: c.subtle,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),

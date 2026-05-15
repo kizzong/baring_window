@@ -9,6 +9,7 @@ import 'package:baring_windows/onboarding/on_boarding5.dart';
 import 'package:baring_windows/onboarding/on_boarding6.dart';
 import 'package:baring_windows/onboarding/on_boarding7.dart';
 import 'package:baring_windows/onboarding/on_boarding_service.dart';
+import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
@@ -105,12 +106,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final w = MediaQuery.of(context).size.width;
     final h = MediaQuery.of(context).size.height;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050A12),
+      backgroundColor: c.scaffoldBg,
       body: Column(
         children: [
           Expanded(
@@ -147,7 +149,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
           // Bottom controls
           Container(
-            color: const Color(0xFF050A12),
+            color: c.scaffoldBg,
             padding: EdgeInsets.only(
               bottom: bottomPadding + h * 0.02,
               top: h * 0.015,
@@ -161,8 +163,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     dotHeight: 10,
                     dotWidth: 10,
                     spacing: 12,
-                    dotColor: Colors.white.withOpacity(0.3),
-                    activeDotColor: Colors.white,
+                    dotColor: c.textPrimary.withOpacity(0.3),
+                    activeDotColor: c.primary,
                   ),
                 ),
                 SizedBox(height: h * 0.02),
@@ -178,16 +180,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           child: ElevatedButton(
                             onPressed: () => _goToPage(_currentPage - 1),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.10),
+                              backgroundColor: c.textPrimary.withOpacity(0.10),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
                               ),
                               elevation: 0,
                               padding: EdgeInsets.zero,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_back_ios_new_rounded,
-                              color: Colors.white,
+                              color: c.textPrimary,
                               size: 20,
                             ),
                           ),
@@ -248,16 +250,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           child: ElevatedButton(
                             onPressed: () => _goToPage(_currentPage - 1),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.10),
+                              backgroundColor: c.textPrimary.withOpacity(0.10),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
                               ),
                               elevation: 0,
                               padding: EdgeInsets.zero,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_back_ios_new_rounded,
-                              color: Colors.white,
+                              color: c.textPrimary,
                               size: 20,
                             ),
                           ),
@@ -269,7 +271,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             child: ElevatedButton(
                               onPressed: _onButtonPressed,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3E7BFF),
+                                backgroundColor: c.primary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(18),
                                 ),
@@ -277,10 +279,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               ),
                               child: Text(
                                 _getButtonText(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: c.scaffoldBg,
                                 ),
                               ),
                             ),
@@ -296,7 +298,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     child: ElevatedButton(
                       onPressed: _onButtonPressed,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3E7BFF),
+                        backgroundColor: c.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
@@ -304,10 +306,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                       child: Text(
                         _getButtonText(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                          color: c.scaffoldBg,
                         ),
                       ),
                     ),
@@ -321,7 +323,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     child: Text(
                       '건너뛰기',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.45),
+                        color: c.subtle,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),

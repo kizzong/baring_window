@@ -1,3 +1,4 @@
+import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class OnboardingPage6 extends StatelessWidget {
@@ -5,18 +6,12 @@ class OnboardingPage6 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF3E7BFF);
+    final c = context.colors;
 
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF08101C), Color(0xFF050A12)],
-        ),
-      ),
+      color: c.scaffoldBg,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -29,25 +24,25 @@ class OnboardingPage6 extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: primaryBlue.withOpacity(0.15),
+                  color: c.primary.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.notifications_none_rounded,
                   size: 50,
-                  color: primaryBlue,
+                  color: c.primary,
                 ),
               ),
 
               const SizedBox(height: 32),
 
-              const Text(
+              Text(
                 '알림을 받아보세요',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w900,
-                  color: Colors.white,
+                  color: c.textPrimary,
                   letterSpacing: -0.4,
                 ),
               ),
@@ -60,7 +55,7 @@ class OnboardingPage6 extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   height: 1.6,
-                  color: Colors.white.withOpacity(0.55),
+                  color: c.subtle,
                   fontWeight: FontWeight.w600,
                 ),
               ),

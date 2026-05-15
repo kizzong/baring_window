@@ -1,3 +1,4 @@
+import 'package:baring_windows/theme/app_colors.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -61,16 +62,11 @@ class _OnboardingPage7State extends State<OnboardingPage7> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: const Color(0xFF050A12),
+      backgroundColor: c.scaffoldBg,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF08101C), Color(0xFF050A12)],
-          ),
-        ),
+        color: c.scaffoldBg,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -86,13 +82,13 @@ class _OnboardingPage7State extends State<OnboardingPage7> {
 
                 const SizedBox(height: 24),
 
-                const Text(
+                Text(
                   '바링은 어떠세요?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    color: c.textPrimary,
                     letterSpacing: -0.4,
                   ),
                 ),

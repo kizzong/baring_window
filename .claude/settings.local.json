@@ -23,7 +23,8 @@
       "Bash(xargs ls:*)",
       "Bash(./gradlew clean:*)",
       "Bash(adb devices:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(flutter clean:*)"
     ]
   },
   "model": "sonnet"

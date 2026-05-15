@@ -2,6 +2,7 @@ import 'package:baring_windows/services/widget_service.dart';
 import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import '../services/notification_service.dart';
 
 class DDaySettingsPage extends StatefulWidget {
   final int? editingIndex; // null = 새 목표 추가
@@ -21,6 +22,8 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
   DateTime targetDate = DateTime.now();
 
   int selectedPreset = 0;
+
+  bool milestoneNotificationEnabled = false;
 
   final presets = const [
     _Preset('(기본)하늘', [Color(0xFF2D86FF), Color(0xFF1B5CFF)]),
@@ -58,6 +61,9 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
       targetDate = DateTime.parse(eventData["targetDate"]);
       final preset = eventData["selectedPreset"] ?? 0;
       selectedPreset = (preset >= 0 && preset < presets.length) ? preset : 0;
+
+      // 알림 설정 로드
+      milestoneNotificationEnabled = eventData["milestoneNotificationEnabled"] ?? false;
     });
   }
 
@@ -67,7 +73,27 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
     final cards = (rawCards as List).map((e) => Map<String, dynamic>.from(e)).toList();
     final idx = widget.editingIndex!;
     if (idx >= cards.length) return;
+
+    // 알림 취소
+    await NotificationService.cancelDDayMilestoneNotifications(idx);
+
     cards.removeAt(idx);
+
+    // 삭제 후 인덱스가 변경된 카드들의 알림 재스케줄
+    for (int i = idx; i < cards.length; i++) {
+      final card = cards[i];
+      final enabled = card["milestoneNotificationEnabled"] ?? false;
+      if (enabled) {
+        await NotificationService.rescheduleDDayMilestoneNotifications(
+          cardIndex: i,
+          title: card["title"] ?? "",
+          targetDate: DateTime.parse(card["targetDate"]),
+          hour: 9,
+          minute: 0,
+        );
+      }
+    }
+
     await baringBox.put("eventCards", cards);
 
     // 먼저 화면 닫기
@@ -154,7 +180,97 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
       startDate = DateTime.now();
       targetDate = DateTime.now();
       selectedPreset = 0;
+      milestoneNotificationEnabled = false;
     });
+  }
+
+  Future<void> _showDDayAlertInfo() async {
+    final c = context.colors;
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: c.scaffoldBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.notifications_active_rounded,
+                  color: c.primary,
+                  size: 48,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'D-day 알림',
+                  style: TextStyle(
+                    color: c.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  '특정 D-day마다 알림을 받습니다',
+                  style: TextStyle(
+                    color: c.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: c.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: c.primary.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    '"시험까지 10일 남았습니다!"',
+                    style: TextStyle(
+                      color: c.primary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: TextButton.styleFrom(
+                      backgroundColor: c.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      '확인',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -194,16 +310,43 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
                 "startDate": startDate.toIso8601String(),
                 "targetDate": targetDate.toIso8601String(),
                 "selectedPreset": selectedPreset,
+                "milestoneNotificationEnabled": milestoneNotificationEnabled,
+                "milestoneNotificationHour": 9,
+                "milestoneNotificationMinute": 0,
               };
               final rawCards = baringBox.get("eventCards");
               final cards = rawCards != null
                   ? (rawCards as List).map((e) => Map<String, dynamic>.from(e)).toList()
                   : <Map<String, dynamic>>[];
               final idx = widget.editingIndex;
+
               if (idx != null && idx < cards.length) {
+                // 수정 모드: 재스케줄
                 cards[idx] = newCard;
+                if (milestoneNotificationEnabled) {
+                  await NotificationService.rescheduleDDayMilestoneNotifications(
+                    cardIndex: idx,
+                    title: _titleController.text,
+                    targetDate: targetDate,
+                    hour: 9,
+                    minute: 0,
+                  );
+                } else {
+                  await NotificationService.cancelDDayMilestoneNotifications(idx);
+                }
               } else {
+                // 신규 모드: 스케줄
+                final newIndex = cards.length;
                 cards.add(newCard);
+                if (milestoneNotificationEnabled) {
+                  await NotificationService.scheduleDDayMilestoneNotifications(
+                    cardIndex: newIndex,
+                    title: _titleController.text,
+                    targetDate: targetDate,
+                    hour: 9,
+                    minute: 0,
+                  );
+                }
               }
               await baringBox.put("eventCards", cards);
 
@@ -334,6 +477,39 @@ class _DDaySettingsPageState extends State<DDaySettingsPage> {
                                 ),
                               ],
                             ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // D-day 알림
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'D-day 알림',
+                              style: TextStyle(
+                                color: c.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Switch(
+                            value: milestoneNotificationEnabled,
+                            onChanged: (v) async {
+                              if (v) {
+                                await _showDDayAlertInfo();
+                                setState(() => milestoneNotificationEnabled = true);
+                              } else {
+                                setState(() => milestoneNotificationEnabled = false);
+                              }
+                            },
+                            activeColor: Colors.white,
+                            activeTrackColor: c.primary,
+                            inactiveThumbColor: c.textPrimary.withOpacity(0.9),
+                            inactiveTrackColor: c.textPrimary.withOpacity(0.20),
                           ),
                         ],
                       ),

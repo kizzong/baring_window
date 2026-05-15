@@ -1,3 +1,4 @@
+import 'package:baring_windows/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
@@ -27,21 +28,15 @@ class OnboardingPage5State extends State<OnboardingPage5> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF3E7BFF);
+    final c = context.colors;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050A12),
+      backgroundColor: c.scaffoldBg,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         behavior: HitTestBehavior.translucent,
         child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF08101C), Color(0xFF050A12)],
-            ),
-          ),
+          color: c.scaffoldBg,
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -49,13 +44,13 @@ class OnboardingPage5State extends State<OnboardingPage5> {
                 children: [
                   const Spacer(flex: 2),
 
-                  const Text(
+                  Text(
                     '프로필을 설정하세요',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: c.textPrimary,
                       letterSpacing: -0.4,
                     ),
                   ),
@@ -67,8 +62,8 @@ class OnboardingPage5State extends State<OnboardingPage5> {
                     controller: _nameController,
                     maxLength: 10,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: c.textPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                     ),
@@ -76,14 +71,14 @@ class OnboardingPage5State extends State<OnboardingPage5> {
                     decoration: InputDecoration(
                       hintText: '이름을 입력하세요',
                       hintStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.3),
+                        color: c.subtle,
                         fontWeight: FontWeight.w600,
                       ),
                       counterStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.3),
+                        color: c.subtle,
                       ),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.07),
+                      fillColor: c.inputBg,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -91,13 +86,13 @@ class OnboardingPage5State extends State<OnboardingPage5> {
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.08),
+                          color: c.borderColor,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(
-                          color: primaryBlue,
+                        borderSide: BorderSide(
+                          color: c.primary,
                           width: 1.5,
                         ),
                       ),
