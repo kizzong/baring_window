@@ -228,11 +228,33 @@ class WidgetService {
       final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final weekday = DateTime.now().weekday; // 1=월 ~ 7=일
 
+      // ⭐ 전체 todos와 routines 데이터를 SharedDefaults에 저장 (iOS 위젯이 자정에 날짜별 필터링하기 위함)
+      final todoRaw = baringBox.get('todos');
+      final routineRaw = baringBox.get('routines');
+
+      if (todoRaw != null) {
+        final Map data = todoRaw is String ? jsonDecode(todoRaw) : Map.from(todoRaw);
+        await HomeWidget.saveWidgetData<String>('all_todos_json', jsonEncode(data));
+      } else {
+        await HomeWidget.saveWidgetData<String>('all_todos_json', '{}');
+      }
+
+      if (routineRaw != null) {
+        final allRoutines = (routineRaw as List)
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        await HomeWidget.saveWidgetData<String>('all_routines_json', jsonEncode(allRoutines));
+      } else {
+        await HomeWidget.saveWidgetData<String>('all_routines_json', '[]');
+      }
+
+      // 현재 날짜 저장 (위젯이 마지막 업데이트된 날짜 확인용)
+      await HomeWidget.saveWidgetData<String>('widget_last_update_date', todayKey);
+
       List<Map<String, dynamic>> items = [];
       int totalCount = 0;
 
       // 미완료 루틴 (먼저)
-      final routineRaw = baringBox.get('routines');
       if (routineRaw != null) {
         final allRoutines = (routineRaw as List)
             .map((e) => Map<String, dynamic>.from(e))
@@ -262,7 +284,6 @@ class WidgetService {
       }
 
       // 미완료 할 일 (그 다음)
-      final todoRaw = baringBox.get('todos');
       if (todoRaw != null) {
         final Map data = todoRaw is String ? jsonDecode(todoRaw) : Map.from(todoRaw);
         final todayTodos = data[todayKey];

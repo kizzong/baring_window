@@ -701,26 +701,87 @@ struct TodoProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
         let sharedDefaults = UserDefaults(suiteName: "group.baringWidget")
-        let jsonStr = sharedDefaults?.string(forKey: "widget_items_json") ?? "[]"
-        let count = sharedDefaults?.integer(forKey: "widget_items_count") ?? 0
-        let total = sharedDefaults?.integer(forKey: "widget_items_total") ?? 0
+
+        // ⭐ 전체 todos와 routines 데이터를 읽어서 현재 날짜 기준으로 필터링
+        let allTodosJson = sharedDefaults?.string(forKey: "all_todos_json") ?? "{}"
+        let allRoutinesJson = sharedDefaults?.string(forKey: "all_routines_json") ?? "[]"
+
+        // 현재 날짜 계산
+        let calendar = Calendar.current
+        let now = Date()
+        let weekday = calendar.component(.weekday, from: now) // 1=일, 2=월, ..., 7=토
+        let adjustedWeekday = weekday == 1 ? 7 : weekday - 1 // 1=월 ~ 7=일로 변환
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        let todayKey = dateFormatter.string(from: now)
 
         var items: [WidgetItem] = []
-        if let data = jsonStr.data(using: .utf8),
-           let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-            for (index, dict) in array.enumerated() {
-                let type = dict["type"] as? String ?? "todo"
-                let title = dict["title"] as? String ?? ""
-                let time = dict["time"] as? String
-                let routineId = dict["routineId"] as? String
-                let todoIndex = dict["todoIndex"] as? Int
-                items.append(WidgetItem(id: index, type: type, title: title, time: time, routineId: routineId, todoIndex: todoIndex))
+        var totalCount = 0
+
+        // 1. 루틴 처리
+        if let routinesData = allRoutinesJson.data(using: .utf8),
+           let routinesArray = try? JSONSerialization.jsonObject(with: routinesData) as? [[String: Any]] {
+            for routine in routinesArray {
+                let routineType = routine["type"] as? String ?? ""
+                var isForToday = false
+
+                if routineType == "daily" {
+                    isForToday = true
+                } else if routineType == "weekly" {
+                    if let days = routine["days"] as? [Int] {
+                        isForToday = days.contains(adjustedWeekday)
+                    }
+                }
+
+                if isForToday {
+                    totalCount += 1
+                    let completions = routine["completions"] as? [String: Bool] ?? [:]
+                    if completions[todayKey] != true {
+                        let title = routine["title"] as? String ?? ""
+                        let routineId = "\(routine["id"] ?? "")"
+                        items.append(WidgetItem(
+                            id: items.count,
+                            type: "routine",
+                            title: title,
+                            time: nil,
+                            routineId: routineId,
+                            todoIndex: nil
+                        ))
+                    }
+                }
             }
         }
 
-        let entry = TodoEntry(date: Date(), items: items, count: count, total: total)
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+        // 2. 할 일 처리
+        if let todosData = allTodosJson.data(using: .utf8),
+           let todosDict = try? JSONSerialization.jsonObject(with: todosData) as? [String: Any],
+           let todayTodos = todosDict[todayKey] as? [[String: Any]] {
+            for (index, todo) in todayTodos.enumerated() {
+                totalCount += 1
+                let done = todo["done"] as? Bool ?? false
+                if !done {
+                    let title = todo["title"] as? String ?? ""
+                    let time = todo["time"] as? String
+                    items.append(WidgetItem(
+                        id: items.count,
+                        type: "todo",
+                        title: title,
+                        time: time,
+                        routineId: nil,
+                        todoIndex: index
+                    ))
+                }
+            }
+        }
+
+        let entry = TodoEntry(date: now, items: items, count: items.count, total: totalCount)
+
+        // ⭐ 다음 자정에 타임라인 갱신
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now)!
+        let nextMidnight = calendar.startOfDay(for: tomorrow)
+        let timeline = Timeline(entries: [entry], policy: .after(nextMidnight))
         completion(timeline)
     }
 }

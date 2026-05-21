@@ -15,7 +15,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.baring"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -40,7 +40,7 @@ android {
     defaultConfig {
         applicationId = "com.baring"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -54,6 +54,22 @@ android {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // Force compatible versions of androidx.glance
+    constraints {
+        implementation("androidx.glance:glance-appwidget") {
+            version {
+                strictly("1.1.0")
+            }
+            because("1.3.0-alpha01 requires SDK 37 and AGP 9.1.0")
+        }
+        implementation("androidx.compose.remote:remote-creation-android") {
+            version {
+                strictly("1.0.0")
+            }
+            because("1.0.0-alpha11 requires SDK 37 and AGP 9.1.0")
+        }
+    }
 }
 
 flutter {
