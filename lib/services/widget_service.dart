@@ -321,7 +321,7 @@ class WidgetService {
   }
 
   /// 위젯에서 아이템 탭 시 완료 처리 (백그라운드 콜백에서 호출)
-  /// Hive는 백그라운드 isolate에서 접근 불가 → SharedPreferences만 수정
+  /// 백그라운드에서 직접 Hive 데이터를 업데이트하고 위젯을 즉시 갱신
   static Future<void> toggleWidgetItem(Uri? uri) async {
     if (uri == null) return;
     try {
@@ -332,59 +332,90 @@ class WidgetService {
       final type = uri.queryParameters['type'];
       if (type == null) return;
 
-      // 1. 위젯 SharedPreferences에서 현재 아이템 리스트 읽기
-      final jsonStr =
-          await HomeWidget.getWidgetData<String>('widget_items_json') ?? '[]';
-      final items = List<Map<String, dynamic>>.from(
-        (jsonDecode(jsonStr) as List)
-            .map((e) => Map<String, dynamic>.from(e)),
-      );
+      // 백그라운드 isolate에서 Hive 초기화 및 접근
+      await Hive.initFlutter();
+      final baringBox = await Hive.openBox('baring');
+      final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-      // 2. 해당 아이템만 제거
+      // Hive 데이터 직접 업데이트
       if (type == 'routine') {
         final routineId = uri.queryParameters['routineId'];
-        items.removeWhere((item) =>
-            item['type'] == 'routine' &&
-            (item['routineId'] ?? '').toString() == routineId);
+        final routineRaw = baringBox.get('routines');
+        if (routineRaw != null) {
+          final allRoutines = (routineRaw as List)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          for (int i = 0; i < allRoutines.length; i++) {
+            if ((allRoutines[i]['id'] ?? '').toString() == routineId) {
+              final completions = Map<String, dynamic>.from(
+                  allRoutines[i]['completions'] ?? {});
+              completions[todayKey] = true;
+              allRoutines[i]['completions'] = completions;
+              break;
+            }
+          }
+          await baringBox.put('routines', allRoutines);
+        }
       } else if (type == 'todo') {
         final todoIndexStr = uri.queryParameters['todoIndex'];
-        items.removeWhere((item) =>
-            item['type'] == 'todo' &&
-            (item['todoIndex'] ?? '').toString() == todoIndexStr);
+        final todoIndex = int.tryParse(todoIndexStr ?? '');
+        if (todoIndex != null) {
+          final todoRaw = baringBox.get('todos');
+          if (todoRaw != null) {
+            final Map data = todoRaw is String
+                ? jsonDecode(todoRaw)
+                : Map.from(todoRaw);
+            final todayTodos = data[todayKey];
+            if (todayTodos != null) {
+              final todoList = (todayTodos as List)
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList();
+              if (todoIndex < todoList.length) {
+                todoList[todoIndex]['done'] = true;
+                data[todayKey] = todoList;
+                await baringBox.put('todos', Map<String, dynamic>.from(
+                  data.map((k, v) => MapEntry(k.toString(), v)),
+                ));
+              }
+            }
+          }
+        }
       }
 
-      // 3. 업데이트된 아이템 저장
-      await HomeWidget.saveWidgetData<String>(
-          'widget_items_json', jsonEncode(items));
-      await HomeWidget.saveWidgetData<int>('widget_items_count', items.length);
+      // 전체 위젯 재동기화 (업데이트된 Hive 데이터 기반)
+      await syncWidget();
 
-      // 4. pending 토글 저장 (앱 복귀 시 Hive 동기화용)
-      final pendingStr =
-          await HomeWidget.getWidgetData<String>('pending_widget_toggles') ??
-              '[]';
-      final pendingList = List<Map<String, dynamic>>.from(
-        (jsonDecode(pendingStr) as List)
-            .map((e) => Map<String, dynamic>.from(e)),
-      );
-      final toggleInfo = <String, dynamic>{'type': type};
-      if (type == 'routine') {
-        toggleInfo['routineId'] = uri.queryParameters['routineId'];
-      } else if (type == 'todo') {
-        toggleInfo['todoIndex'] =
-            int.tryParse(uri.queryParameters['todoIndex'] ?? '');
-      }
-      pendingList.add(toggleInfo);
-      await HomeWidget.saveWidgetData<String>(
-          'pending_widget_toggles', jsonEncode(pendingList));
+      // dataVersion 증가 (앱이 열려있을 경우 UI 갱신용)
+      dataVersion.value++;
 
-      // 5. 위젯 갱신
-      if (Platform.isAndroid) {
-        await HomeWidget.updateWidget(androidName: 'TodoWidgetProvider');
-      } else if (Platform.isIOS) {
-        await HomeWidget.updateWidget(iOSName: 'TodoWidget');
-      }
     } catch (e) {
       print('위젯 아이템 토글 오류: $e');
+      // fallback: 실패 시 pending 토글로 저장
+      try {
+        if (Platform.isIOS) {
+          await HomeWidget.setAppGroupId('group.baringWidget');
+        }
+        final type = uri.queryParameters['type'];
+        final pendingStr =
+            await HomeWidget.getWidgetData<String>('pending_widget_toggles') ??
+                '[]';
+        final pendingList = List<Map<String, dynamic>>.from(
+          (jsonDecode(pendingStr) as List)
+              .map((e) => Map<String, dynamic>.from(e)),
+        );
+        final toggleInfo = <String, dynamic>{'type': type};
+        if (type == 'routine') {
+          toggleInfo['routineId'] = uri.queryParameters['routineId'];
+        } else if (type == 'todo') {
+          toggleInfo['todoIndex'] =
+              int.tryParse(uri.queryParameters['todoIndex'] ?? '');
+        }
+        pendingList.add(toggleInfo);
+        await HomeWidget.saveWidgetData<String>(
+            'pending_widget_toggles', jsonEncode(pendingList));
+      } catch (e2) {
+        print('fallback pending 저장 실패: $e2');
+      }
     }
   }
 
