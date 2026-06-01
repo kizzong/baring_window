@@ -819,28 +819,46 @@ struct ToggleTodoIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let sharedDefaults = UserDefaults(suiteName: "group.baringWidget")
 
-        // 1. widget_items_json에서 해당 아이템 제거
-        let jsonStr = sharedDefaults?.string(forKey: "widget_items_json") ?? "[]"
-        if let data = jsonStr.data(using: .utf8),
-           var array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        let todayKey = dateFormatter.string(from: Date())
 
-            // 매칭되는 아이템 찾아서 제거
-            array.removeAll { dict in
-                let type = dict["type"] as? String ?? ""
-                if type == "routine" && itemType == "routine" {
-                    return (dict["routineId"] as? String) == routineId
-                } else if type == "todo" && itemType == "todo" {
-                    return (dict["todoIndex"] as? Int) == todoIndex
+        // 1. all_todos_json / all_routines_json 직접 업데이트
+        //    TodoProvider.getTimeline()이 이 데이터를 기반으로 재생성하므로,
+        //    여기를 수정해야 reloadTimelines 후 아이템이 즉시 사라진다.
+        if itemType == "todo", let idx = todoIndex {
+            let jsonStr = sharedDefaults?.string(forKey: "all_todos_json") ?? "{}"
+            if let data = jsonStr.data(using: .utf8),
+               var dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               var todayTodos = dict[todayKey] as? [[String: Any]] {
+                if idx < todayTodos.count {
+                    todayTodos[idx]["done"] = true
+                    dict[todayKey] = todayTodos
+                    if let updatedData = try? JSONSerialization.data(withJSONObject: dict),
+                       let updatedStr = String(data: updatedData, encoding: .utf8) {
+                        sharedDefaults?.set(updatedStr, forKey: "all_todos_json")
+                    }
                 }
-                return false
             }
-
-            // 업데이트된 JSON 저장
-            if let updatedData = try? JSONSerialization.data(withJSONObject: array),
-               let updatedStr = String(data: updatedData, encoding: .utf8) {
-                sharedDefaults?.set(updatedStr, forKey: "widget_items_json")
+        } else if itemType == "routine", let rid = routineId {
+            let jsonStr = sharedDefaults?.string(forKey: "all_routines_json") ?? "[]"
+            if let data = jsonStr.data(using: .utf8),
+               var routines = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                for i in 0..<routines.count {
+                    let rId = "\(routines[i]["id"] ?? "")"
+                    if rId == rid {
+                        var completions = routines[i]["completions"] as? [String: Any] ?? [:]
+                        completions[todayKey] = true
+                        routines[i]["completions"] = completions
+                        break
+                    }
+                }
+                if let updatedData = try? JSONSerialization.data(withJSONObject: routines),
+                   let updatedStr = String(data: updatedData, encoding: .utf8) {
+                    sharedDefaults?.set(updatedStr, forKey: "all_routines_json")
+                }
             }
-            sharedDefaults?.set(array.count, forKey: "widget_items_count")
         }
 
         // 2. pending_widget_toggles에 추가 (앱 복귀 시 Hive 동기화용)
